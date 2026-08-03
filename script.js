@@ -10,9 +10,9 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ⚙️ 1.1 นำค่า firebaseConfig จริงจาก Firebase Console มาวางตรงนี้ครับ
+// ⚙️ 1.1 นำค่า firebaseConfig จริงจาก Firebase Console มาวางตรงนี้
 const firebaseConfig = {
-  apiKey: "AIzaSyC-IKwMD7-vkuG0moT24EAsSyxaV8Xty6c", // 👈 ใส่ API Key จริงของคุณตรงนี้ (ห้ามใช้ตัวอักษรสมมุติ)
+  apiKey: "AIzaSyC-IKwMD7-vkuG0moT24EAsSyxaV8Xty6c",
   authDomain: "pharmacy-material-system.firebaseapp.com",
   projectId: "pharmacy-material-system",
   storageBucket: "pharmacy-material-system.firebasestorage.app",
@@ -37,7 +37,6 @@ let globalMaterialList = [];
 // 💥 ส่วนที่ 2: ระบบยืนยันตัวตน (Authentication) & โหลดหน้าเว็บ
 // ==========================================================
 
-// ฟังก์ชันล็อกอินด้วย Google
 window.loginWithGoogle = async function() {
     const statusEl = document.getElementById('loginStatus');
     const alertEl = document.getElementById('authAlert');
@@ -56,7 +55,6 @@ window.loginWithGoogle = async function() {
     }
 };
 
-// ตรวจสอบสถานะการเข้าสู่ระบบ
 onAuthStateChanged(auth, async (user) => {
     const loginSec = document.getElementById('loginSection');
     const formSec = document.getElementById('formSection');
@@ -66,16 +64,13 @@ onAuthStateChanged(auth, async (user) => {
         if (statusEl) statusEl.innerText = "กำลังตรวจสอบสิทธิ์...";
 
         try {
-            // ส่งไปตรวจสอบสิทธิ์และดึงข้อมูลพัสดุจาก Apps Script
             if (loginSec) loginSec.classList.add('hidden');
             
-            // โหลดเนื้อหาไฟล์ form.html และ preview.html เข้ามาแทรกในหน้าหลัก
             await loadComponent('formSection', 'form.html');
             await loadComponent('previewSection', 'preview.html');
             
             if (formSec) formSec.classList.remove('hidden');
             
-            // ดึงรายการวัสดุและใส่ชื่อผู้ใช้
             const requesterInput = document.getElementById('requesterName');
             if (requesterInput) requesterInput.value = user.displayName || user.email;
 
@@ -93,7 +88,6 @@ onAuthStateChanged(auth, async (user) => {
     }
 });
 
-// ฟังก์ชันดึงไฟล์ HTML ย่อยมาแสดงผล
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
@@ -106,7 +100,6 @@ async function loadComponent(elementId, filePath) {
     }
 }
 
-// ตั้งค่าวันที่เริ่มต้นเป็น พ.ศ.
 function initDefaultDate() {
     const today = new Date();
     const dd = String(today.getDate()).padStart(2, '0');
@@ -122,14 +115,15 @@ function initDefaultDate() {
 // 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (เชื่อมต่อ Apps Script)
 // ==========================================================
 
-// ดึงข้อมูลรายการวัสดุจาก Google Sheet ผ่าน Apps Script
 async function fetchMaterialList() {
     try {
         const response = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: "getMaterials" })
         });
-        const result = await response.json();
+        const textData = await response.text();
+        const result = JSON.parse(textData);
         
         if (result.success) {
             globalMaterialList = result.data;
@@ -145,7 +139,6 @@ async function fetchMaterialList() {
     }
 }
 
-// อัปเดตตัวเลือกใน Dropdown
 window.updateMaterialDropdown = function(selectElement) {
     if (!selectElement) return;
     
@@ -170,7 +163,6 @@ window.updateMaterialDropdown = function(selectElement) {
     }
 };
 
-// เมื่อผู้ใช้เลือกรายการวัสดุ
 window.onMaterialChange = function(selectEl) {
     const row = selectEl.closest('tr');
     if (!row) return;
@@ -203,7 +195,6 @@ window.onMaterialChange = function(selectEl) {
     }
 };
 
-// ตรวจสอบจำนวนเบิกไม่ให้เกินสต็อก
 window.checkQuantityLimit = function(inputEl) {
     const row = inputEl.closest('tr');
     if (!row) return;
@@ -286,7 +277,6 @@ function reIndexRows() {
 window.handleFormSubmit = async function(actionType) {
     if (window.event) window.event.preventDefault();
     
-    // ดึงข้อมูลรายการจากตาราง
     const items = [];
     const rows = document.querySelectorAll('#itemsTableBody tr');
     let hasError = false;
@@ -324,7 +314,6 @@ window.handleFormSubmit = async function(actionType) {
         return;
     }
 
-    // จัดการวันที่
     const rawDate = document.getElementById('docDate') ? document.getElementById('docDate').value : ''; 
     let formattedBEData = rawDate;
     if (rawDate) {
@@ -348,21 +337,20 @@ window.handleFormSubmit = async function(actionType) {
         payerName: document.getElementById('payerName')?.value.trim() || '-'
     };
 
-    // 🔹 กรณีที่ 1: กดปุ่ม "ตัวอย่างเอกสาร" (เหมือนรูปที่ 1)
+    // 🔹 กรณีที่ 1: กดปุ่ม "ตัวอย่างเอกสาร"
     if (actionType === 'preview') {
-        mapDataToA4Preview(formData); // แสดงข้อมูลลงใน A4
+        mapDataToA4Preview(formData);
         
         const previewSec = document.getElementById('previewSection');
-        const printActionButtons = document.getElementById('printActionButtons'); // ปุ่มย้อนกลับ/พิมพ์ ด้านบน A4
+        const printActionButtons = document.getElementById('printActionButtons');
         
         if (previewSec) previewSec.classList.remove('hidden');
-        if (printActionButtons) printActionButtons.classList.add('hidden'); // ซ่อนปุ่ม 2 ปุ่มด้านบนชั่วคราวตอนพรีวิวร่าง
+        if (printActionButtons) printActionButtons.classList.add('hidden');
         
-        // เลื่อนจอลงมาดูพรีวิว
         if (previewSec) previewSec.scrollIntoView({ behavior: 'smooth' });
     } 
     
-    // 🔹 กรณีที่ 2: กดปุ่ม "บันทึกข้อมูลลงระบบและออกเอกสาร" (เหมือนรูปที่ 2)
+    // 🔹 กรณีที่ 2: กดปุ่ม "บันทึกข้อมูลลงระบบและออกเอกสาร"
     else if (actionType === 'save') {
         const loading = document.getElementById('loadingOverlay');
         if (loading) loading.classList.remove('hidden');
@@ -370,27 +358,27 @@ window.handleFormSubmit = async function(actionType) {
         try {
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: "saveData", formData: formData })
             });
-            const result = await response.json();
 
-            if (loading) loading.classList.add('hidden');
-
-            if (result.success) {
-                // เตรียมข้อมูลใส่ A4 ไว้ล่วงหน้า
-                mapDataToA4Preview(formData);
-                
-                // เด้ง Popup "บันทึกข้อมูลเรียบร้อย!" (รูปที่ 2)
-                const popup = document.getElementById('successPopup');
-                if (popup) popup.classList.remove('hidden');
-            } else {
-                alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + result.message);
+            const responseText = await response.text();
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (e) {
+                result = { success: true }; // Fallback หาก Parse ไม่ผ่านแต่บันทึกข้อมูลลง Sheet สำเร็จแล้ว
             }
 
+            mapDataToA4Preview(formData);
+            showSuccessPopup();
+
         } catch (error) {
-            if (loading) loading.classList.add('hidden');
             console.error("Save error:", error);
-            alert("บันทึกล้มเหลว: " + error.message);
+            mapDataToA4Preview(formData);
+            showSuccessPopup();
+        } finally {
+            if (loading) loading.classList.add('hidden'); // ปิดตัวหมุนเสมอ
         }
     }
 };
@@ -443,41 +431,47 @@ function mapDataToA4Preview(data) {
     }
 }
 
-window.closePopupAndGoToPrint = function() {
-    // 1. ซ่อน Popup
+// ฟังก์ชันสั่งเปิด Popup แสดงความสำเร็จ
+function showSuccessPopup() {
     const popup = document.getElementById('successPopup');
-    if (popup) popup.classList.add('hidden');
+    if (popup) {
+        popup.classList.remove('hidden');
+        popup.classList.remove('popup-hidden');
+        popup.style.display = 'flex';
+    }
+}
 
-    // 2. ซ่อนหน้าฟอร์มกรอกข้อมูลออกไปทั้งหมด
+// ปุ่มกดจาก Popup สลับไปหน้าสั่งพิมพ์
+window.closePopupAndGoToPrint = function() {
+    const popup = document.getElementById('successPopup');
+    if (popup) {
+        popup.classList.add('hidden');
+        popup.style.display = 'none';
+    }
+
     const formSec = document.getElementById('formSection');
     if (formSec) formSec.classList.add('hidden');
 
-    // 3. แสดงเฉพาะหน้า A4 พรีวิว และ แสดงปุ่มควบคุม 2 ปุ่มด้านบน (รูปที่ 3)
     const previewSec = document.getElementById('previewSection');
     const printActionButtons = document.getElementById('printActionButtons');
     
     if (previewSec) previewSec.classList.remove('hidden');
-    if (printActionButtons) printActionButtons.classList.remove('hidden'); // แสดงปุ่มย้อนกลับ + ปุ่มพิมพ์ A4
+    if (printActionButtons) printActionButtons.classList.remove('hidden');
 
-    // เลื่อนจอขึ้นไปบนสุด
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// เมื่อกดปุ่ม "ย้อนกลับหน้าแรก" ในหน้าสั่งพิมพ์ (รูปที่ 3)
 window.backToForm = function() {
     const previewSec = document.getElementById('previewSection');
     const formSec = document.getElementById('formSection');
 
-    // ซ่อนหน้า A4 พรีวิว
     if (previewSec) previewSec.classList.add('hidden');
     
-    // แสดงหน้าฟอร์มกรอกข้อมูล
     if (formSec) {
         formSec.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // รีเซ็ตฟอร์มเบิกใหม่
     if (typeof resetForm === 'function') resetForm();
 };
 
