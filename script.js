@@ -339,16 +339,24 @@ window.handleFormSubmit = async function(actionType) {
 
     // 🔹 กรณีที่ 1: กดปุ่ม "ตัวอย่างเอกสาร"
     if (actionType === 'preview') {
-        mapDataToA4Preview(formData);
+        mapDataToA4Preview(formData); // แสดงข้อมูลลงใน A4
         
         const previewSec = document.getElementById('previewSection');
-        const printActionButtons = document.getElementById('printActionButtons');
-        
+        const printActionButtons = document.getElementById('printActionButtons'); // ปุ่มระบบเดิม (ถ้ามี)
+        const postSaveActions = document.getElementById('postSaveActions');       // ปุ่ม 2 ปุ่มใหม่
+
         if (previewSec) previewSec.classList.remove('hidden');
-        if (printActionButtons) printActionButtons.classList.add('hidden');
         
+        // 🚫 บังคับซ่อนชุดปุ่มสั่งพิมพ์/ย้อนกลับ เมื่ออยู่ในโหมด "พรีวิวร่าง" เท่านั้น
+        if (printActionButtons) printActionButtons.classList.add('hidden');
+        if (postSaveActions) {
+            postSaveActions.style.display = 'none';
+            postSaveActions.classList.add('hidden');
+        }
+        
+        // เลื่อนจอลงมาดูพรีวิว A4
         if (previewSec) previewSec.scrollIntoView({ behavior: 'smooth' });
-    } 
+    }
     
     // 🔹 กรณีที่ 2: กดปุ่ม "บันทึกข้อมูลลงระบบและออกเอกสาร"
     else if (actionType === 'save') {
@@ -486,16 +494,23 @@ window.backToForm = async function() {
     // 1. ซ่อนหน้า A4 พรีวิว
     if (previewSec) previewSec.classList.add('hidden');
     
-    // 2. แสดงหน้าฟอร์มกรอกข้อมูล
+    // 2. ซ่อนปุ่มย้อนกลับ/พิมพ์ที่อยู่เหนือ A4 ป้องกันการแสดงค้าง
+    const postSaveActions = document.getElementById('postSaveActions');
+    if (postSaveActions) {
+        postSaveActions.style.display = 'none';
+        postSaveActions.classList.add('hidden');
+    }
+
+    // 3. แสดงหน้าฟอร์มกรอกข้อมูล
     if (formSec) {
         formSec.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 3. รีเซ็ตล้างฟอร์ม
+    // 4. รีเซ็ตล้างฟอร์ม (พร้อมใส่ชื่อผู้ขอเบิกกลับคืนมา)
     if (typeof resetForm === 'function') resetForm();
 
-    // 🔄 4. ดึงข้อมูลพัสดุล่าสุดจาก Google Sheets ใหม่ทันที (เพื่อให้ยอดคงเหลืออัปเดตเป็นปัจจุบัน)
+    // 5. ดึงข้อมูลพัสดุล่าสุดจาก Google Sheets ใหม่ทันที
     if (typeof fetchMaterialList === 'function') {
         await fetchMaterialList();
     }
@@ -505,6 +520,7 @@ window.resetForm = function() {
     const form = document.getElementById('materialForm');
     if (form) form.reset();
     
+    // เคลียร์ตารางรายการวัสดุให้เหลือแถวเดียว
     const tbody = document.getElementById('itemsTableBody');
     if (tbody) {
         tbody.innerHTML = `
@@ -529,7 +545,15 @@ window.resetForm = function() {
     const firstSelect = document.getElementById('itemSelect1');
     if (firstSelect) updateMaterialDropdown(firstSelect);
     
+    // ตั้งค่าวันที่ปัจจุบัน
     initDefaultDate();
+
+    // 🔑 คืนค่าชื่อผู้ขอเบิกจากระบบ Firebase Authentication กลับเข้าช่อง
+    const currentUser = auth.currentUser;
+    const requesterInput = document.getElementById('requesterName');
+    if (currentUser && requesterInput) {
+        requesterInput.value = currentUser.displayName || currentUser.email;
+    }
 };
 
 window.printDoc = function() {
