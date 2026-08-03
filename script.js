@@ -579,11 +579,30 @@ window.closeDriveModal = function() {
     if (iframe) iframe.src = '';
 };
 // ==========================================================
-// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็นไฟล์ PDF และสั่งดาวน์โหลด
+// 📄 ฟังก์ชันช่วยแปลง Image URL เป็น Base64 (แก้ปัญหา CORS โลโก้หาย)
 // ==========================================================
+function convertImageToBase64(imgUrl) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous'; // ขอสิทธิ์ดึงภาพข้ามโดเมน
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const dataURL = canvas.toDataURL('image/jpeg');
+            resolve(dataURL);
+        };
+        img.onerror = (error) => reject(error);
+        img.src = imgUrl;
+    });
+}
 
-window.exportToPDF = function() {
-    // 1. อ้างอิงไปยัง Element เอกสาร A4
+// ==========================================================
+// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (เวอร์ชันรองรับโลโก้ BUU)
+// ==========================================================
+window.exportToPDF = async function() {
     const element = document.getElementById('previewSection');
 
     if (!element) {
@@ -591,37 +610,65 @@ window.exportToPDF = function() {
         return;
     }
 
-    // 2. ซ่อนปุ่มกดควบคุมไม่ให้ติดเข้าไปในไฟล์ PDF (เผื่อไว้)
+    // 1. ซ่อนแถบปุ่มกดไม่ให้ติดเข้าไปในไฟล์ PDF
     const postSaveActions = document.getElementById('postSaveActions');
     if (postSaveActions) postSaveActions.style.visibility = 'hidden';
 
-    // 3. ตั้งชื่อไฟล์ PDF ตามวันที่ปัจจุบัน (หรือเลขที่ใบเบิก)
+    // 2. แสดงหมุนโหลด (Loading)
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.classList.remove('hidden');
+
+    // 3. ตั้งชื่อไฟล์ PDF ตามวันที่ปัจจุบัน
     const today = new Date();
     const dateString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
     const fileName = `ใบเบิกพัสดุ_${dateString}.pdf`;
 
-    // 4. ตั้งค่าคุณลักษณะของการส่งออกเป็น PDF (A4 Portrait)
+    // 4. อ้างอิง แท็ก <img> ของโลโก้ และแปลงให้เป็น Base64
+    const logoImg = element.querySelector('img'); 
+    let originalSrc = "";
+
+    if (logoImg) {
+        originalSrc = logoImg.src; // เก็บ URL เดิมไว้คืนค่าทีหลัง
+        try {
+            // แปลงภาพจาก URL ให้กลายเป็น Base64 String
+            const base64Data = await convertImageToBase64("https://photo.buu.ac.th/logo/buu_tb.jpg");
+            logoImg.src = base64Data; // เปลี่ยนแหล่งที่มาของภาพเป็น Base64 ชั่วคราว
+        } catch (e) {
+            console.warn("ไม่สามารถแปลงโลโก้เป็น Base64 ได้ จะใช้ URL เดิม:", e);
+        }
+    }
+
+    // 5. ตั้งค่าการแปลง PDF
     const opt = {
         margin:       0,
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        html2canvas:  { 
+            scale: 2, 
+            useCORS: true, 
+            allowTaint: true,
+            scrollY: 0 
+        },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    // 5. แสดง Loading แจ้งผู้ใช้ชั่วคราว
-    const loading = document.getElementById('loadingOverlay');
-    if (loading) loading.classList.remove('hidden');
+    try {
+        // รอให้ DOM อัปเดตโครงสร้างภาพเล็กน้อย
+        await new Promise(resolve => setTimeout(resolve, 200));
 
-    // 6. ประมวลผลและสร้างไฟล์ PDF
-    html2pdf().set(opt).from(element).save().then(() => {
-        // คืนค่าการแสดงผลเมื่อดาวน์โหลดเสร็จสมบูรณ์
-        if (postSaveActions) postSaveActions.style.visibility = 'visible';
-        if (loading) loading.classList.add('hidden');
-    }).catch(err => {
+        // สั่งประมวลผล PDF
+        await html2pdf().set(opt).from(element).save();
+
+    } catch (err) {
         console.error("PDF Export error:", err);
+        alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
+    } finally {
+        // 6. คืนค่า URL เดิมของโลโก้ และคืนค่าปุ่มกด
+        if (logoImg && originalSrc) {
+            logoImg.src = originalSrc;
+        }
         if (postSaveActions) postSaveActions.style.visibility = 'visible';
         if (loading) loading.classList.add('hidden');
-        alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
-    });
+    }
 };
