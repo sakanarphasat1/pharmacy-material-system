@@ -579,7 +579,7 @@ window.closeDriveModal = function() {
     if (iframe) iframe.src = '';
 };
 // ==========================================================
-// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (เวอร์ชันใช้งานร่วมกับไฟล์ใน GitHub)
+// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (เวอร์ชันแก้ปัญหาหน้า 2 ว่างเปล่า 100%)
 // ==========================================================
 
 window.exportToPDF = async function() {
@@ -603,23 +603,31 @@ window.exportToPDF = async function() {
     const dateString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
     const fileName = `ใบเบิกพัสดุ_${dateString}.pdf`;
 
-    // 4. การตั้งค่า html2pdf
+    // 4. ปรับแต่งสไตล์ Element ชั่วคราว ป้องกันไม่ให้ความสูงเกิน 1 หน้า A4
+    const originalMaxHeight = element.style.maxHeight;
+    const originalOverflow = element.style.overflow;
+    
+    element.style.maxHeight = '295mm'; // จำกัดความสูงให้อยู่ในขอบเขต A4 (297mm)
+    element.style.overflow = 'hidden';
+
+    // 5. การตั้งค่า html2pdf เพื่อบังคับให้มีเพียง 1 หน้าถัดไป
     const opt = {
-        margin:       [5, 5, 5, 5], // ขอบกระดาษ 5mm รอบทิศทาง
+        margin:       0, // ตั้งค่า Margin เป็น 0 เพื่อให้พอดีกับพิกเซลของ A4
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
-            scale: 2, 
-            useCORS: true, 
+            scale: 2,             // ความคมชัดสูง
+            useCORS: true,        // รองรับการโหลดโลโก้ภายใน Repository
             logging: false,
-            scrollY: 0 
+            scrollY: 0
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: 'avoid-all' } // ป้องกันการล้นขึ้นหน้า 2
+        // 📌 จุดสำคัญ: บังคับห้ามตัดขึ้นหน้าใหม่ในทุกกรณี
+        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     try {
-        // หน่วงเวลาเล็กน้อยเพื่อให้เบราว์เซอร์เตรียม DOM
+        // หน่วงเวลาเล็กน้อยเพื่อให้ DOM นิ่ง
         await new Promise(resolve => setTimeout(resolve, 200));
 
         // สั่งสร้างและดาวน์โหลดไฟล์ PDF
@@ -629,7 +637,11 @@ window.exportToPDF = async function() {
         console.error("PDF Export error:", err);
         alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
     } finally {
-        // คืนค่าปุ่มกดและปิดตัวหมุนโหลด
+        // คืนค่าสไตล์เดิมของ Element
+        element.style.maxHeight = originalMaxHeight;
+        element.style.overflow = originalOverflow;
+
+        // คืนค่าการแสดงผลปุ่มกดและปิดตัวหมุนโหลด
         if (postSaveActions) postSaveActions.style.visibility = 'visible';
         if (loading) loading.classList.add('hidden');
     }
