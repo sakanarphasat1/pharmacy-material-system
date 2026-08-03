@@ -1,0 +1,31 @@
+<body>
+
+    <div class="navbar">
+        <span style="font-weight: 600;">💊 Pharmacy Material System</span>
+        <span>RxBUU . Firebase Edition</span>
+    </div>
+
+    <div class="app-container">
+        <!-- 🔑 หน้า ล็อกอิน (Firebase Auth) -->
+        <div id="loginSection" class="login-card">
+            <h3 style="color: #003366; margin-bottom: 10px;">🔒 เข้าสู่ระบบเบิกพัสดุ</h3>
+            <p style="color: #666; font-size: 0.9rem; margin-bottom: 25px;">กรุณาล็อกอินด้วย Google Account เพื่อยืนยันตัวตน</p>
+            
+            <button class="btn-google" onclick="loginWithGoogle()">
+                🔑 ลงชื่อเข้าใช้ด้วย Google
+            </button>
+            
+            <p id="loginStatus" style="margin-top: 15px; font-size: 0.85rem; color: #555;"></p>
+            <div id="authAlert" class="alert-box"></div>
+        </div>
+
+        <!-- 📝 หน้าฟอร์มเบิกวัสดุ (ซ่อนไว้จนกว่าจะล็อกอินสำเร็จ) -->
+        <div id="formSection" class="hidden">
+            <!-- ใส่โครงสร้าง HTML Form เดิมของคุณตรงนี้ -->
+            <h3>ยินดีต้อนรับ! กรุณากรอกฟอร์มเบิกวัสดุ</h3>
+            <input type="text" id="requesterName" placeholder="ชื่อผู้เบิก">
+            <!-- ... ตารางและปุ่มกดบันทึก ... -->
+        </div>
+    </div>
+
+</body>
