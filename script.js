@@ -367,10 +367,16 @@ window.handleFormSubmit = async function(actionType) {
             try {
                 result = JSON.parse(responseText);
             } catch (e) {
-                result = { success: true }; // Fallback หาก Parse ไม่ผ่านแต่บันทึกข้อมูลลง Sheet สำเร็จแล้ว
+                result = { success: true }; 
             }
 
+            // 1. นำข้อมูลเข้าหน้า A4 พรีวิว
             mapDataToA4Preview(formData);
+
+            // 🔄 2. ดึงข้อมูลสต็อกล่าสุดจาก Google Sheets มาอัปเดตเก็บใน RAM ทันที
+            fetchMaterialList(); 
+
+            // 3. แสดง Popup บันทึกสำเร็จ
             showSuccessPopup();
 
         } catch (error) {
@@ -378,7 +384,7 @@ window.handleFormSubmit = async function(actionType) {
             mapDataToA4Preview(formData);
             showSuccessPopup();
         } finally {
-            if (loading) loading.classList.add('hidden'); // ปิดตัวหมุนเสมอ
+            if (loading) loading.classList.add('hidden');
         }
     }
 };
