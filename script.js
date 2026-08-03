@@ -582,11 +582,8 @@ window.closeDriveModal = function() {
 // 📄 ฟังก์ชันแปลงเอกสาร A4 เป็นไฟล์ PDF และสั่งดาวน์โหลด
 // ==========================================================
 
-// ==========================================================
-// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (แก้ไขเรื่องโลโก้หาย & หน้าว่าง)
-// ==========================================================
-
-window.exportToPDF = async function() {
+window.exportToPDF = function() {
+    // 1. อ้างอิงไปยัง Element เอกสาร A4
     const element = document.getElementById('previewSection');
 
     if (!element) {
@@ -594,48 +591,37 @@ window.exportToPDF = async function() {
         return;
     }
 
-    // 1. ซ่อนแถบปุ่มกดไม่ให้ติดเข้าไปในไฟล์ PDF
+    // 2. ซ่อนปุ่มกดควบคุมไม่ให้ติดเข้าไปในไฟล์ PDF (เผื่อไว้)
     const postSaveActions = document.getElementById('postSaveActions');
     if (postSaveActions) postSaveActions.style.visibility = 'hidden';
 
-    // 2. แสดง หน้าต่างหมุนโหลด (Loading)
-    const loading = document.getElementById('loadingOverlay');
-    if (loading) loading.classList.remove('hidden');
-
-    // 3. ตั้งชื่อไฟล์ PDF ตามวันที่ปัจจุบัน
+    // 3. ตั้งชื่อไฟล์ PDF ตามวันที่ปัจจุบัน (หรือเลขที่ใบเบิก)
     const today = new Date();
     const dateString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
     const fileName = `ใบเบิกพัสดุ_${dateString}.pdf`;
 
-    // 4. การตั้งค่า html2pdf เพื่อแก้ปัญหาโลโก้หาย และ ปัญหามี 2 หน้า
+    // 4. ตั้งค่าคุณลักษณะของการส่งออกเป็น PDF (A4 Portrait)
     const opt = {
-        margin:       0, // ตั้งค่าขอบกระดาษเป็น 0 เพื่อป้องกันหน้าล้น
+        margin:       0,
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-            scale: 2,             // ความละเอียดคมชัด
-            useCORS: true,        // 🟢 แก้ปัญหาโลโก้หาย (เปิดสิทธิ์โหลดรูปภาพ Cross-Origin)
-            allowTaint: true,     // 🟢 อนุญาตให้ดึงรูปภาพข้ามโดเมนมาวาดบน Canvas
-            logging: false,
-            scrollY: 0            // ป้องกันการจับภาพเยื้องตำแหน่ง
-        },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } // 🟢 ป้องกันการขึ้นหน้า 2 ว่างเปล่า
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    try {
-        // หน่วงเวลา 300ms เพื่อให้แน่ใจว่ารูปภาพโลโก้โหลดเข้าสู่ DOM สมบูรณ์แล้ว
-        await new Promise(resolve => setTimeout(resolve, 300));
+    // 5. แสดง Loading แจ้งผู้ใช้ชั่วคราว
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.classList.remove('hidden');
 
-        // ประมวลผลสร้างและดาวน์โหลดไฟล์ PDF
-        await html2pdf().set(opt).from(element).save();
-
-    } catch (err) {
-        console.error("PDF Export error:", err);
-        alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
-    } finally {
-        // คืนค่าการแสดงผลเดิม
+    // 6. ประมวลผลและสร้างไฟล์ PDF
+    html2pdf().set(opt).from(element).save().then(() => {
+        // คืนค่าการแสดงผลเมื่อดาวน์โหลดเสร็จสมบูรณ์
         if (postSaveActions) postSaveActions.style.visibility = 'visible';
         if (loading) loading.classList.add('hidden');
-    }
+    }).catch(err => {
+        console.error("PDF Export error:", err);
+        if (postSaveActions) postSaveActions.style.visibility = 'visible';
+        if (loading) loading.classList.add('hidden');
+        alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
+    });
 };
