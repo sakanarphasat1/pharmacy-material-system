@@ -1,0 +1,118 @@
+<!-- 📌 ปุ่มควบคุมหลังบันทึกข้อมูลสำเร็จ (แสดงเฉพาะบนหน้าจอ ซ่อนเมื่อสั่งพิมพ์) -->
+<div id="postSaveActions" class="preview-actions no-print" style="display: none; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; margin-bottom: 20px;">
+    <button type="button" class="btn btn-secondary" onclick="backToForm()">🔙 ย้อนกลับหน้าแรก</button>
+    <button type="button" class="btn btn-primary" onclick="printDoc()">🖨️ พิมพ์ใบเบิกพัสดุ (A4)</button>
+</div>
+
+<!-- 📄 หน้าเอกสารจำลองขนาด A4 -->
+<div class="a4-page">
+    <!-- เลขที่เอกสาร (มุมขวาบน) -->
+    <div class="a4-doc-id">
+        เลขที่ 510000...........
+    </div>
+    
+    <!-- หัวกระดาษ / โลโก้ -->
+    <div class="a4-header-center">
+        <img src="https://photo.buu.ac.th/logo/buu_tb.jpg" class="buu-logo" alt="BUU Logo">
+        <div class="uni-title">คณะเภสัชศาสตร์ มหาวิทยาลัยบูรพา</div>
+        <div class="doc-title">ใบเบิกวัสดุ</div>
+    </div>
+
+    <!-- ตารางรายละเอียดส่วนหัว (Metadata) -->
+    <table class="metadata-layout-table">
+        <tr>
+            <td style="width: 10%; white-space: nowrap;">แหล่งเงิน</td>
+            <td style="border-bottom: 1px dotted #000; width: 50%; padding-left: 5px;"><span id="viewMoneySource">-</span></td>
+            <td style="width: 12%; padding-left: 15px; white-space: nowrap;">หน่วยงาน</td>
+            <td style="border-bottom: 1px dotted #000; width: 28%; padding-left: 5px;"><span id="viewOrganization">-</span></td>
+        </tr>
+        <tr>
+            <td>แผนงาน</td>
+            <td style="border-bottom: 1px dotted #000;"><span id="viewWorkPlan"></span></td>
+            <td style="padding-left: 15px;">กองทุน</td>
+            <td style="border-bottom: 1px dotted #000;"></td>
+        </tr>
+        <tr>
+            <td>งาน</td>
+            <td style="border-bottom: 1px dotted #000;"></td>
+            <td style="padding-left: 15px;">หมวด</td>
+            <td style="border-bottom: 1px dotted #000;"></td>
+        </tr>
+        <tr>
+            <td></td>
+            <td></td>
+            <td style="padding-left: 15px; white-space: nowrap;">วันที่</td>
+            <td style="border-bottom: 1px dotted #000; padding-left: 5px;"><span id="viewDocDate">-</span></td>
+        </tr>
+    </table>
+
+    <!-- ตารางรายการพัสดุ A4 -->
+    <table class="a4-materials-table">
+        <thead>
+            <tr>
+                <th rowspan="2" style="width: 8%;">ลำดับที่</th>
+                <th rowspan="2" style="width: 42%;">รายการ</th>
+                <th rowspan="2" style="width: 10%;">จำนวน</th>
+                <th rowspan="2" style="width: 10%;">หน่วยนับ</th>
+                <th colspan="3" class="section-supply-title">ส่วนงานพัสดุ</th>
+            </tr>
+            <tr>
+                <th style="width: 10%;">รหัสวัสดุ</th>
+                <th style="width: 10%;">เลขที่ใบเบิก</th>
+                <th style="width: 10%;">เลขที่ใบสั่งจ่าย</th>
+            </tr>
+            <tr class="static-code-row">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+        </thead>
+        
+        <!-- พื้นที่รับข้อมูลรายการพัสดุจาก script.js (mapDataToA4Preview) -->
+        <tbody id="previewTableBody">
+            <!-- ข้อมูลจะถูกวาดลงตรงนี้ด้วย JavaScript -->
+        </tbody>
+        
+        <tfoot>
+            <tr class="total-row">
+                <td></td>
+                <td></td>
+                <td></td>
+                <td colspan="4" style="text-align: left; font-weight: bold; padding-left: 10px;">รวมเป็นเงิน</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- ตารางช่องลงนามปลายกระดาษ -->
+    <table class="signatures-layout-table">
+        <tr class="sig-line-row">
+            <td>ลงชื่อ..............................................</td>
+            <td>ลงชื่อ..............................................</td>
+        </tr>
+        <tr class="sig-name-row">
+            <td>( <span id="viewRequesterName">-</span> )</td>
+            <td>( <span id="viewSupplyHeadName">-</span> )</td>
+        </tr>
+        <tr class="sig-title-row">
+            <td>ผู้ขอเบิก/ผู้รับของ</td>
+            <td>หัวหน้าหน่วยพัสดุ</td>
+        </tr>
+        
+        <tr class="sig-line-row" style="padding-top: 30px;">
+            <td>ลงชื่อ..............................................</td>
+            <td>ลงชื่อ..............................................</td>
+        </tr>
+        <tr class="sig-name-row">
+            <td>( <span id="viewAccountantName">-</span> )</td>
+            <td>( <span id="viewPayerName">-</span> )</td>
+        </tr>
+        <tr class="sig-title-row">
+            <td>ผู้ตัดบัญชีวัสดุ</td>
+            <td>ผู้จ่ายของ</td>
+        </tr>
+    </table>
+</div>
