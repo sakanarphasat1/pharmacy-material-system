@@ -10,9 +10,9 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ⚙️ 1.1 Firebase Configuration ของคุณ
+// ⚙️ 1.1 นำค่า firebaseConfig จริงจาก Firebase Console มาวางตรงนี้ครับ
 const firebaseConfig = {
-  apiKey: "AIzaSyC-IKwMD7-vkuG0mOT24EAsSyxaV8Xty6c",
+  apiKey: "AIzaSyC-IKwMD7-vkuG0moT24EAsSyxaV8Xty6c", // 👈 ใส่ API Key จริงของคุณตรงนี้ (ห้ามใช้ตัวอักษรสมมุติ)
   authDomain: "pharmacy-material-system.firebaseapp.com",
   projectId: "pharmacy-material-system",
   storageBucket: "pharmacy-material-system.firebasestorage.app",
@@ -21,7 +21,7 @@ const firebaseConfig = {
   measurementId: "G-EE28Y1L35G"
 };
 
-// 🔗 1.2 Google Apps Script Web App URL (ใส่ URL ที่คุณ Deploy ได้จาก Apps Script ตรงนี้)
+// 🔗 1.2 Web App URL จาก Google Apps Script
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydRhaIaJH41mwiMMg-6qTTrhTfWIbOCNb9FwH5zEyZDQ-MrRmAm3gMpuG16e5XEi-1/exec";
 
 // Initialize Firebase
