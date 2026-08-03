@@ -3,85 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบใบเบิกวัสดุ - คณะเภสัชศาสตร์</title>
-    
-    <!-- 🔤 Google Fonts (Prompt & TH Sarabun New) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&family=TH+Sarabun+New:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
-    
-    <!-- 🎨 ลิงก์เชื่อมโยงไปยังไฟล์ style.css -->
+    <title>ระบบใบเบิกพัสดุ - Pharmacy Material System</title>
+    <!-- Google Fonts Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- นำเข้าไฟล์ สไตล์ CSS -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <!-- 📌 แถบเมนูหลักด้านบน -->
+    <!-- 📌 แถบเมนูลักด้านบน (Navbar) -->
     <div class="navbar no-print">
-        <div class="nav-container">
-            <span class="nav-logo">💊 Pharmacy Material System</span>
-            <span class="nav-status">RxBUU . Firebase Edition</span>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.5rem;">💊</span>
+            <strong style="font-size: 1.1rem; color: #2c3e50;">Pharmacy Material System</strong>
+        </div>
+        <div style="font-size: 0.9rem; color: #7f8c8d; font-weight: 500;">
+            RxBUU . Firebase Edition
         </div>
     </div>
 
+    <!-- 📌 กล่องควบคุมเนื้อหาหลัก (App Container) -->
     <div class="app-container">
-        
-        <!-- 🔑 1. หน้าต่างล็อกอินผ่าน Firebase Authentication -->
-        <div id="loginSection" class="card login-card no-print">
-            <h3 style="color: #003366; margin-bottom: 10px;">🔒 เข้าสู่ระบบเบิกพัสดุ</h3>
-            <p style="color: #666; font-size: 0.9rem; margin-bottom: 25px;">
-                กรุณาลงชื่อเข้าใช้ด้วย Google Account เพื่อยืนยันตัวตนก่อนใช้งานระบบ
+
+        <!-- 🔑 1. ส่วนเข้าสู่ระบบ (Login Section) -->
+        <div id="loginSection" class="card" style="max-width: 450px; margin: 40px auto; text-align: center; padding: 40px 20px;">
+            <div style="font-size: 3rem; margin-bottom: 10px;">🔐</div>
+            <h2 style="margin-bottom: 8px; color: #2c3e50;">เข้าสู่ระบบเบิกพัสดุ</h2>
+            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 25px;">
+                กรุณาเข้าสู่ระบบด้วย Google Account เพื่อยืนยันตัวตนก่อนเข้าใช้งานระบบ
             </p>
-
-            <button class="btn-google" onclick="loginWithGoogle()">
-                <svg width="18" height="18" viewBox="0 0 18 18">
-                    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.617z"/>
-                    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>
-                    <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>
-                    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/>
-                </svg>
-                ลงชื่อเข้าใช้ด้วย Google
+            
+            <button type="button" class="btn-login-google" onclick="loginWithGoogle()" style="width: 100%; justify-content: center; padding: 12px; font-size: 1rem; cursor: pointer;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google Logo" style="width:18px; height:18px; margin-right:8px; vertical-align:middle;">
+                เข้าใช้งานด้วย Google
             </button>
-
-            <p id="loginStatus" style="margin-top: 15px; color: #555; font-size: 0.9rem;"></p>
-            <div id="authAlert" class="alert-box"></div>
+            
+            <div id="loginStatus" style="margin-top: 15px; font-size: 0.85rem; color: #e67e22; font-weight: 500;"></div>
+            <div id="authAlert" style="display: none; margin-top: 15px; padding: 10px; background-color: #fce4e4; border: 1px solid #f9b2b2; border-radius: 6px; color: #c0392b; font-size: 0.85rem;"></div>
         </div>
 
-        <!-- 📝 2. พื้นที่แสดงฟอร์มขอเบิก (จะถูกโหลดมาจาก Form.html หลังล็อกอิน) -->
-        <div id="formSection" class="view-section hidden no-print"></div>
-        
-        <!-- 📄 3. พื้นที่แสดงพรีวิวเอกสารพิมพ์ (จะถูกโหลดมาจาก Preview.html หลังกรอกฟอร์ม) -->
-        <div id="previewSection" class="view-section hidden"></div>
-        
+        <!-- 📝 2. ส่วนฟอร์มบันทึกข้อมูล (Form Section - จะโหลด form.html มาแทรก) -->
+        <div id="formSection" class="hidden"></div>
+
+        <!-- 📄 3. ส่วนแสดงผลพรีวิวใบเบิก (Preview Section - จะโหลด preview.html มาแทรก) -->
+        <div id="previewSection" class="hidden"></div>
+
     </div>
 
-    <!-- ⏳ หน้าต่างแสดงการกำลังโหลด -->
+    <!-- ⏳ หน้าต่างแสดงการกำลังส่งข้อมูล (Loading Overlay) -->
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="spinner"></div>
-        <p>กำลังบันทึกใบเบิกวัสดุ...</p>
+        <div style="margin-top: 15px; font-weight: 500; color: #2c3e50;">กำลังบันทึกข้อมูล กรุณารอสักครู่...</div>
     </div>
 
-    <!-- ✨ หน้าต่างแจ้งเตือนบันทึกสำเร็จ -->
-    <div id="successPopup" class="popup hidden">
-        <div class="popup-content">
-            <h2 style="font-weight: normal; margin-bottom: 20px;">✨ บันทึกข้อมูลเรียบร้อย!</h2>
-            <button class="btn btn-success" style="width: 100%;" onclick="closePopup()">เปิดหน้าพรีวิวเพื่อสั่งพิมพ์</button>
+    <!-- ✨ หน้าต่างแจ้งเตือนบันทึกสำเร็จ (Success Popup) -->
+    <div id="successPopup" class="popup-hidden hidden">
+        <div class="popup-card">
+            <div style="font-size: 3.5rem; color: #2ecc71; margin-bottom: 10px;">✅</div>
+            <h3 style="margin-bottom: 10px; color: #2c3e50;">บันทึกข้อมูลสำเร็จ!</h3>
+            <p style="color: #7f8c8d; font-size: 0.9rem; margin-bottom: 20px;">ระบบได้ทำการบันทึกข้อมูลใบเบิกของคุณเรียบร้อยแล้ว</p>
+            <button type="button" class="btn-primary" onclick="closePopup()" style="width: 100%; padding: 10px; border-radius: 6px; cursor: pointer;">ตกลง</button>
         </div>
     </div>
 
     <!-- 📁 หน้าต่าง Drive Modal สำหรับดูรูปภาพรายการพัสดุ -->
     <div id="driveModal" class="no-print" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
-        <div style="background-color: white; width: 85%; height: 85%; border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.15);">
-            <div style="padding: 12px 20px; background-color: #003366; color: white; display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: bold; font-size: 1rem;">📁 รูปภาพรายการพัสดุ</span>
-                <button type="button" onclick="closeDriveModal()" style="background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; font-weight: bold;">&times;</button>
+        <div style="background: white; width: 85%; height: 85%; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
+            <div style="padding: 12px 20px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-weight: 500;">📁 สมุดภาพรายการพัสดุ</span>
+                <button type="button" onclick="closeDriveModal()" style="background: none; border: none; color: white; font-size: 1.2rem; cursor: pointer;">✕</button>
             </div>
-            <div style="flex: 1; width: 100%; height: 100%;">
-                <iframe id="driveIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
-            </div>
+            <iframe id="driveIframe" src="" style="width: 100%; height: 100%; border: none;"></iframe>
         </div>
     </div>
 
-    <!-- ⚙️ ลิงก์เชื่อมโยงไปยังไฟล์ script.js (ใช้แบบ ES Module สำหรับ Firebase) -->
+    <!-- ⚙️ ลิงก์เชื่อมโยงไปยังไฟล์ script.js (แบบ ES Module สำหรับ Firebase) -->
     <script type="module" src="script.js"></script>
 
 </body>
