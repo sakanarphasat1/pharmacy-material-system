@@ -420,25 +420,49 @@ input:focus, select:focus {
 }
 
 /* =======================================================
-   6. PRINT MEDIA STYLES
+   6. PRINT MEDIA STYLES (ปรับปรุงป้องกันหน้าว่างล้น)
    ======================================================= */
 @media print {
-    body { background: none; padding: 0; margin: 0; }
-    .no-print { display: none !important; }
-    .view-section { display: none; }
-    #previewSection { display: block !important; }
-    
-    @page { 
-        size: A4 portrait; 
-        margin: 0mm !important; 
+    /* 1. รีเซ็ตพื้นหลังและขนาดของ Body ให้พอดีกับกระดาษ */
+    html, body { 
+        background: none !important; 
+        padding: 0 !important; 
+        margin: 0 !important; 
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden !important; /* ป้องกันเนื้อหาล้นสร้างหน้าใหม่ */
+    }
+
+    /* 2. ซ่อนส่วนที่ไม่ต้องการพิมพ์ */
+    .no-print, .view-section, header, footer, nav { 
+        display: none !important; 
+    }
+
+    /* 3. แสดงเฉพาะพื้นที่พรีวิว A4 */
+    #previewSection { 
+        display: block !important; 
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
     
+    /* 4. ตั้งค่าหน้ากระดาษ A4 */
+    @page { 
+        size: A4 portrait; 
+        margin: 0mm !important; /* ลบขอบกระดาษของเบราว์เซอร์ออก */
+    }
+    
+    /* 5. จัดระยะเนื้อหาภายใน A4 ไม่ให้ล้น */
     .a4-page { 
-        width: 100%; 
-        border: none; 
-        box-shadow: none; 
-        margin: 0 !important; 
-        padding: 20mm 15mm 15mm 15mm !important; 
+        width: 210mm !important;
+        max-height: 297mm !important; /* บังคับความสูงไม่ให้เกิน 1 หน้า A4 */
+        border: none !important; 
+        box-shadow: none !important; 
+        margin: 0 auto !important; 
+        padding: 15mm 15mm 10mm 15mm !important; /* ปรับลด Padding ด้านบน/ล่างลงเล็กน้อย */
+        box-sizing: border-box !important; /* นับ Padding รวมในขนาด 210x297mm */
+        page-break-after: avoid !important; /* ห้ามขึ้นหน้าใหม่หลังจบองค์ประกอบนี้ */
+        break-after: avoid !important;
     }
 }
 /* ==========================================
