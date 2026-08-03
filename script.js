@@ -361,16 +361,15 @@ window.handleFormSubmit = async function(actionType) {
             if (loading) loading.classList.add('hidden');
 
             if (result.success) {
+                // 1. นำข้อมูลไปใส่ในหน้ากระดาษ A4
                 mapDataToA4Preview(formData);
                 
+                // 2. แสดง Popup แจ้งเตือนบันทึกสำเร็จ
                 const popup = document.getElementById('successPopup');
                 if (popup) popup.classList.remove('hidden');
 
-                const postSaveBox = document.getElementById('postSaveActions');
-                if (postSaveBox) postSaveBox.style.display = 'flex';
-
+                // 3. รีเซ็ตฟอร์มเตรียมไว้สำหรับการเบิกครั้งถัดไป
                 resetForm();
-                await fetchMaterialList(); // โหลดสต็อกล่าสุดกลับมา
             } else {
                 alert("เกิดข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์: " + result.message);
             }
@@ -382,16 +381,16 @@ window.handleFormSubmit = async function(actionType) {
         }
 
     } else {
-        // กรณีดูพรีวิว (Preview)
+        // กรณีดูลำลอง (ตัวอย่างเอกสาร)
         mapDataToA4Preview(formData);
         
-        const postSaveBox = document.getElementById('postSaveActions');
-        if (postSaveBox) postSaveBox.style.display = 'none';
+        const formSec = document.getElementById('formSection');
+        const previewSec = document.getElementById('previewSection');
         
-        const previewSection = document.getElementById('previewSection');
-        if (previewSection) {
-            previewSection.classList.remove('hidden');
-            previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (formSec) formSec.classList.add('hidden');
+        if (previewSec) {
+            previewSec.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }
 };
@@ -445,7 +444,7 @@ function mapDataToA4Preview(data) {
 }
 
 window.closePopup = function() {
-    // ซ่อน Popup
+    // 🙈 ซ่อน Popup
     const popup = document.getElementById('successPopup');
     if (popup) popup.classList.add('hidden');
     
@@ -455,25 +454,30 @@ window.closePopup = function() {
     // 🙈 ซ่อนหน้าฟอร์มกรอกข้อมูล
     if (formSec) formSec.classList.add('hidden');
     
-    // 👁️ แสดงเฉพาะหน้า A4 Preview
+    // 👁️ แสดงเฉพาะหน้ากระดาษ A4 Preview
     if (prevSec) {
         prevSec.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' }); // เลื่อนขึ้นบนสุด
     }
 };
 
-// 2. เมื่อผู้ใช้กดปุ่ม "กลับไปหน้าฟอร์ม" จากหน้า Preview
+// 2. เมื่อผู้ใช้กดปุ่ม "ย้อนกลับหน้าแรก" เพื่อเบิกใหม่
 window.backToForm = function() {
     const prevSec = document.getElementById('previewSection');
     const formSec = document.getElementById('formSection');
 
-    // 🙈 ซ่อนหน้า A4 Preview
+    // 🙈 ซ่อนหน้ากระดาษ A4 Preview
     if (prevSec) prevSec.classList.add('hidden');
     
-    // 👁️ แสดงเฉพาะหน้าฟอร์ม
+    // 👁️ แสดงเฉพาะหน้าฟอร์มกรอกข้อมูล
     if (formSec) {
         formSec.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    
+    // โหลดข้อมูลสต็อกล่าสุดจาก Sheet กลับมาเตรียมไว้
+    if (typeof fetchMaterialList === 'function') {
+        fetchMaterialList();
     }
 };
 
