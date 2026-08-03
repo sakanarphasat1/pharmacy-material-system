@@ -1,37 +1,32 @@
 // ==========================================================
-// 💥 ส่วนที่ 1: การเชื่อมต่อ Firebase Services (ES Module)
+// 💥 ส่วนที่ 1: การตั้งค่าระบบ (Configuration)
 // ==========================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
     getAuth, 
     signInWithPopup, 
     GoogleAuthProvider, 
-    onAuthStateChanged 
+    onAuthStateChanged,
+    signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-    getFirestore, 
-    collection, 
-    getDocs, 
-    addDoc, 
-    doc, 
-    updateDoc, 
-    serverTimestamp 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-// 🚨 ให้เปลี่ยนค่า config ตรงนี้เป็นค่าจริงจาก Firebase Console ของคุณ
+// ⚙️ 1.1 Firebase Configuration ของคุณ
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyC-IKwMD7-vkuG0mOT24EAsSyxaV8Xty6c",
+  authDomain: "pharmacy-material-system.firebaseapp.com",
+  projectId: "pharmacy-material-system",
+  storageBucket: "pharmacy-material-system.firebasestorage.app",
+  messagingSenderId: "605650439921",
+  appId: "1:605650439921:web:a351896936ba83d1e2e350",
+  measurementId: "G-EE28Y1L35G"
 };
+
+// 🔗 1.2 Google Apps Script Web App URL (ใส่ URL ที่คุณ Deploy ได้จาก Apps Script ตรงนี้)
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbydRhaIaJH41mwiMMg-6qTTrhTfWIbOCNb9FwH5zEyZDQ-MrRmAm3gMpuG16e5XEi-1/exec";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 // ตัวแปรส่วนกลาง
@@ -44,11 +39,20 @@ let globalMaterialList = [];
 
 // ฟังก์ชันล็อกอินด้วย Google
 window.loginWithGoogle = async function() {
+    const statusEl = document.getElementById('loginStatus');
+    const alertEl = document.getElementById('authAlert');
+    if (alertEl) alertEl.style.display = 'none';
+    if (statusEl) statusEl.innerText = "กำลังเชื่อมต่อ Google...";
+
     try {
         await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login failed:", error);
-        alert("เกิดข้อผิดพลาดในการเข้าสู่ระบบ: " + error.message);
+        if (alertEl) {
+            alertEl.style.display = 'block';
+            alertEl.innerText = "เกิดข้อผิดพลาดในการเข้าสู่ระบบ: " + error.message;
+        }
+        if (statusEl) statusEl.innerText = "";
     }
 };
 
@@ -56,26 +60,40 @@ window.loginWithGoogle = async function() {
 onAuthStateChanged(auth, async (user) => {
     const loginSec = document.getElementById('loginSection');
     const formSec = document.getElementById('formSection');
+    const statusEl = document.getElementById('loginStatus');
 
     if (user) {
-        if (loginSec) loginSec.classList.add('hidden');
-        
-        // โหลดเนื้อหาไฟล์ form.html และ preview.html เข้ามาแทรกในหน้าหลัก
-        await loadComponent('formSection', 'form.html');
-        await loadComponent('previewSection', 'preview.html');
-        
-        if (formSec) formSec.classList.remove('hidden');
-        
-        // ดึงรายการวัสดุจาก Firestore และตั้งค่าวันที่เริ่มต้น
-        await fetchMaterialList();
-        initDefaultDate();
+        if (statusEl) statusEl.innerText = "กำลังตรวจสอบสิทธิ์...";
+
+        try {
+            // ส่งไปตรวจสอบสิทธิ์และดึงข้อมูลพัสดุจาก Apps Script
+            if (loginSec) loginSec.classList.add('hidden');
+            
+            // โหลดเนื้อหาไฟล์ form.html และ preview.html เข้ามาแทรกในหน้าหลัก
+            await loadComponent('formSection', 'form.html');
+            await loadComponent('previewSection', 'preview.html');
+            
+            if (formSec) formSec.classList.remove('hidden');
+            
+            // ดึงรายการวัสดุและใส่ชื่อผู้ใช้
+            const requesterInput = document.getElementById('requesterName');
+            if (requesterInput) requesterInput.value = user.displayName || user.email;
+
+            await fetchMaterialList();
+            initDefaultDate();
+            if (statusEl) statusEl.innerText = "";
+
+        } catch (err) {
+            console.error("Error loading user session:", err);
+            if (statusEl) statusEl.innerText = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
+        }
     } else {
         if (loginSec) loginSec.classList.remove('hidden');
         if (formSec) formSec.classList.add('hidden');
     }
 });
 
-// ฟังก์ชันดึงไฟล์ HTML ย่อยเข้ามาใส่ตาม ID
+// ฟังก์ชันดึงไฟล์ HTML ย่อยมาแสดงผล
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
@@ -96,31 +114,34 @@ function initDefaultDate() {
     const yyyyBE = today.getFullYear() + 543;
     const docDateInput = document.getElementById('docDate');
     if (docDateInput) {
-        docDateInput.value = `${today.getFullYear()}-${mm}-${dd}`;
+        docDateInput.value = `${yyyyBE}-${mm}-${dd}`;
     }
 }
 
 // ==========================================================
-// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (Firestore)
+// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (เชื่อมต่อ Apps Script)
 // ==========================================================
 
-// ดึงข้อมูลรายการวัสดุจาก Firestore collection 'materials'
+// ดึงข้อมูลรายการวัสดุจาก Google Sheet ผ่าน Apps Script
 async function fetchMaterialList() {
     try {
-        const querySnapshot = await getDocs(collection(db, "materials"));
-        globalMaterialList = [];
-        querySnapshot.forEach((docSnap) => {
-            globalMaterialList.push({ id: docSnap.id, ...docSnap.data() });
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: "getMaterials" })
         });
-
-        // เติมข้อมูลลงใน Dropdown ของแถวแรก
-        const selectEl = document.getElementById('itemSelect1') || document.querySelector('.item-name');
-        if (selectEl) {
-            updateMaterialDropdown(selectEl);
+        const result = await response.json();
+        
+        if (result.success) {
+            globalMaterialList = result.data;
+            const selectEl = document.getElementById('itemSelect1') || document.querySelector('.item-name');
+            if (selectEl) {
+                updateMaterialDropdown(selectEl);
+            }
+        } else {
+            console.error("โหลดข้อมูลพัสดุล้มเหลว:", result.message);
         }
     } catch (error) {
         console.error("Error fetching materials:", error);
-        alert("โหลดข้อมูลพัสดุล้มเหลว: " + error.message);
     }
 }
 
@@ -135,7 +156,6 @@ window.updateMaterialDropdown = function(selectElement) {
             opt.value = mat.name;
             opt.text = `${mat.code} - ${mat.name} (คงเหลือ: ${mat.stock} ${mat.unit})`; 
             
-            opt.setAttribute('data-id', mat.id);
             opt.setAttribute('data-code', mat.code);
             opt.setAttribute('data-unit', mat.unit);
             opt.setAttribute('data-stock', mat.stock);
@@ -174,7 +194,6 @@ window.onMaterialChange = function(selectEl) {
         if (codeInput) codeInput.value = selectedOption.getAttribute('data-code') || "-";
         if (unitInput) unitInput.value = selectedOption.getAttribute('data-unit') || "-";
         
-        // ผูก Event ตรวจสอบจำนวนเงิน/จำนวนคงเหลือ
         if (qtyInput) {
             qtyInput.oninput = () => checkQuantityLimit(qtyInput);
         }
@@ -261,7 +280,7 @@ function reIndexRows() {
 }
 
 // ==========================================================
-// 💥 ส่วนที่ 5: จัดการ Form Submission & Save to Firestore
+// 💥 ส่วนที่ 5: จัดการ Form Submission & Save to Google Sheets
 // ==========================================================
 
 window.handleFormSubmit = async function(actionType) {
@@ -273,7 +292,6 @@ window.handleFormSubmit = async function(actionType) {
 
     rows.forEach(row => {
         const nameSelect = row.querySelector('.item-name');
-        const selectedOpt = nameSelect ? nameSelect.options[nameSelect.selectedIndex] : null;
         const name = nameSelect ? nameSelect.value.trim() : '';
         const qty = row.querySelector('.item-qty') ? row.querySelector('.item-qty').value.trim() : '0';
         const unit = row.querySelector('.item-unit') ? row.querySelector('.item-unit').value.trim() : '';
@@ -287,10 +305,9 @@ window.handleFormSubmit = async function(actionType) {
         
         if (name !== "") {
             items.push({
-                materialId: selectedOpt ? selectedOpt.getAttribute('data-id') : null,
                 index: row.querySelector('.row-index') ? row.querySelector('.row-index').innerText : '',
                 name: name,
-                qty: Number(qty),
+                qty: qty,
                 unit: unit,
                 code: code,
                 reqNo: reqNo,
@@ -306,7 +323,6 @@ window.handleFormSubmit = async function(actionType) {
         return;
     }
 
-    // แปลงรูปแบบวันที่เป็น พ.ศ.
     const rawDate = document.getElementById('docDate') ? document.getElementById('docDate').value : ''; 
     let formattedBEData = rawDate;
     if (rawDate) {
@@ -327,9 +343,7 @@ window.handleFormSubmit = async function(actionType) {
         supplyHeadName: document.getElementById('supplyHeadName')?.value.trim() || '-',
         approverName: "..........................................................",
         accountantName: document.getElementById('accountantName')?.value.trim() || '-',
-        payerName: document.getElementById('payerName')?.value.trim() || '-',
-        createdAt: serverTimestamp(),
-        createdBy: auth.currentUser ? auth.currentUser.email : 'Unknown'
+        payerName: document.getElementById('payerName')?.value.trim() || '-'
     };
 
     if (actionType === 'save') {
@@ -337,33 +351,29 @@ window.handleFormSubmit = async function(actionType) {
         if (loading) loading.classList.remove('hidden');
 
         try {
-            // 1. บันทึกข้อมูลลง Firestore ใน collection "requests"
-            await addDoc(collection(db, "requests"), formData);
-
-            // 2. ตัดสต็อกพัสดุใน collection "materials"
-            for (const item of items) {
-                if (item.materialId) {
-                    const matRef = doc(db, "materials", item.materialId);
-                    const matObj = globalMaterialList.find(m => m.id === item.materialId);
-                    if (matObj) {
-                        const newStock = Math.max(0, matObj.stock - item.qty);
-                        await updateDoc(matRef, { stock: newStock });
-                    }
-                }
-            }
+            // ส่งข้อมูลไปบันทึกผ่าน Apps Script Web App
+            const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: "saveData", formData: formData })
+            });
+            const result = await response.json();
 
             if (loading) loading.classList.add('hidden');
-            
-            mapDataToA4Preview(formData);
-            
-            const popup = document.getElementById('successPopup');
-            if (popup) popup.classList.remove('hidden');
 
-            const postSaveBox = document.getElementById('postSaveActions');
-            if (postSaveBox) postSaveBox.style.display = 'block';
+            if (result.success) {
+                mapDataToA4Preview(formData);
+                
+                const popup = document.getElementById('successPopup');
+                if (popup) popup.classList.remove('hidden');
 
-            resetForm();
-            await fetchMaterialList(); // โหลดสต็อกล่าสุดกลับมา
+                const postSaveBox = document.getElementById('postSaveActions');
+                if (postSaveBox) postSaveBox.style.display = 'flex';
+
+                resetForm();
+                await fetchMaterialList(); // โหลดสต็อกล่าสุดกลับมา
+            } else {
+                alert("เกิดข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์: " + result.message);
+            }
 
         } catch (error) {
             if (loading) loading.classList.add('hidden');
