@@ -178,9 +178,12 @@ input:focus, select:focus {
     font-size: 1.1rem; 
 }
 
+/* ==========================================
+   📌 CSS สไตล์ปุ่มมาตรฐาน (เพิ่มเติม .btn-danger)
+   ========================================== */
 .form-actions, .preview-actions { 
     display: flex; 
-    justify-content: flex-end; 
+    justify-content: center; 
     gap: 15px; 
     margin-top: 25px; 
 }
@@ -192,15 +195,18 @@ input:focus, select:focus {
     font-weight: 500; 
     cursor: pointer; 
     font-size: 0.95rem; 
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
 }
 
 .btn-primary { 
-    background: var(--primary-pastel); 
+    background: var(--primary-pastel, #dbeafe); 
     color: #21618C; 
 }
-
 .btn-primary:hover { 
-    background: var(--primary-dark); 
+    background: var(--primary-dark, #2980b9); 
     color: #FFF; 
 }
 
@@ -208,10 +214,23 @@ input:focus, select:focus {
     background: #EAEDED; 
     color: #5D6D7E; 
 }
+.btn-secondary:hover {
+    background: #D5DBDB;
+}
 
 .btn-success { 
-    background: var(--success-pastel); 
+    background: var(--success-pastel, #d4edda); 
     color: #1E8449; 
+}
+
+/* 🔴 เพิ่ม Class สำหรับปุ่ม PDF (สีแดงอ่อนพาสเทล นุ่มนวล) */
+.btn-danger {
+    background: #FADBD8;
+    color: #78281F;
+}
+.btn-danger:hover {
+    background: #F2D7D5;
+    color: #641E16;
 }
 
 .view-section { 
