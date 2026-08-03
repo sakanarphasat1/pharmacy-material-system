@@ -579,29 +579,9 @@ window.closeDriveModal = function() {
     if (iframe) iframe.src = '';
 };
 // ==========================================================
-// 📄 ฟังก์ชันช่วยแปลง Image URL เป็น Base64 (แก้ปัญหา CORS โลโก้หาย)
+// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (เวอร์ชันใช้งานร่วมกับไฟล์ใน GitHub)
 // ==========================================================
-function convertImageToBase64(imgUrl) {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous'; // ขอสิทธิ์ดึงภาพข้ามโดเมน
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            const dataURL = canvas.toDataURL('image/jpeg');
-            resolve(dataURL);
-        };
-        img.onerror = (error) => reject(error);
-        img.src = imgUrl;
-    });
-}
 
-// ==========================================================
-// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (เวอร์ชันรองรับโลโก้ BUU)
-// ==========================================================
 window.exportToPDF = async function() {
     const element = document.getElementById('previewSection');
 
@@ -610,11 +590,11 @@ window.exportToPDF = async function() {
         return;
     }
 
-    // 1. ซ่อนแถบปุ่มกดไม่ให้ติดเข้าไปในไฟล์ PDF
+    // 1. ซ่อนปุ่มกดไม่ให้ติดเข้าไปในไฟล์ PDF
     const postSaveActions = document.getElementById('postSaveActions');
     if (postSaveActions) postSaveActions.style.visibility = 'hidden';
 
-    // 2. แสดงหมุนโหลด (Loading)
+    // 2. แสดงหน้าต่างหมุนโหลด (Loading)
     const loading = document.getElementById('loadingOverlay');
     if (loading) loading.classList.remove('hidden');
 
@@ -623,51 +603,33 @@ window.exportToPDF = async function() {
     const dateString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
     const fileName = `ใบเบิกพัสดุ_${dateString}.pdf`;
 
-    // 4. อ้างอิง แท็ก <img> ของโลโก้ และแปลงให้เป็น Base64
-    const logoImg = element.querySelector('img'); 
-    let originalSrc = "";
-
-    if (logoImg) {
-        originalSrc = logoImg.src; // เก็บ URL เดิมไว้คืนค่าทีหลัง
-        try {
-            // แปลงภาพจาก URL ให้กลายเป็น Base64 String
-            const base64Data = await convertImageToBase64("https://photo.buu.ac.th/logo/buu_tb.jpg");
-            logoImg.src = base64Data; // เปลี่ยนแหล่งที่มาของภาพเป็น Base64 ชั่วคราว
-        } catch (e) {
-            console.warn("ไม่สามารถแปลงโลโก้เป็น Base64 ได้ จะใช้ URL เดิม:", e);
-        }
-    }
-
-    // 5. ตั้งค่าการแปลง PDF
+    // 4. การตั้งค่า html2pdf
     const opt = {
-        margin:       0,
+        margin:       [5, 5, 5, 5], // ขอบกระดาษ 5mm รอบทิศทาง
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
             scale: 2, 
             useCORS: true, 
-            allowTaint: true,
+            logging: false,
             scrollY: 0 
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+        pagebreak:    { mode: 'avoid-all' } // ป้องกันการล้นขึ้นหน้า 2
     };
 
     try {
-        // รอให้ DOM อัปเดตโครงสร้างภาพเล็กน้อย
+        // หน่วงเวลาเล็กน้อยเพื่อให้เบราว์เซอร์เตรียม DOM
         await new Promise(resolve => setTimeout(resolve, 200));
 
-        // สั่งประมวลผล PDF
+        // สั่งสร้างและดาวน์โหลดไฟล์ PDF
         await html2pdf().set(opt).from(element).save();
 
     } catch (err) {
         console.error("PDF Export error:", err);
         alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
     } finally {
-        // 6. คืนค่า URL เดิมของโลโก้ และคืนค่าปุ่มกด
-        if (logoImg && originalSrc) {
-            logoImg.src = originalSrc;
-        }
+        // คืนค่าปุ่มกดและปิดตัวหมุนโหลด
         if (postSaveActions) postSaveActions.style.visibility = 'visible';
         if (loading) loading.classList.add('hidden');
     }
