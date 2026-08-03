@@ -443,21 +443,29 @@ function showSuccessPopup() {
 
 // ปุ่มกดจาก Popup สลับไปหน้าสั่งพิมพ์
 window.closePopupAndGoToPrint = function() {
+    // 1. ซ่อน Popup แจ้งเตือน
     const popup = document.getElementById('successPopup');
     if (popup) {
         popup.classList.add('hidden');
         popup.style.display = 'none';
     }
 
+    // 2. ซ่อนแบบฟอร์มกรอกข้อมูล
     const formSec = document.getElementById('formSection');
     if (formSec) formSec.classList.add('hidden');
 
+    // 3. แสดงหน้าพรีวิวเอกสาร A4
     const previewSec = document.getElementById('previewSection');
-    const printActionButtons = document.getElementById('printActionButtons');
-    
     if (previewSec) previewSec.classList.remove('hidden');
-    if (printActionButtons) printActionButtons.classList.remove('hidden');
 
+    // 4. สั่งเปิดแสดงชุดปุ่มย้อนกลับ และ ปุ่มพิมพ์ (postSaveActions)
+    const postSaveActions = document.getElementById('postSaveActions');
+    if (postSaveActions) {
+        postSaveActions.style.display = 'flex'; // สั่งเปลี่ยนจาก display: none เป็น flex
+        postSaveActions.classList.remove('hidden');
+    }
+
+    // เลื่อนหน้าจอขึ้นบนสุดอย่างนุ่มนวล
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
