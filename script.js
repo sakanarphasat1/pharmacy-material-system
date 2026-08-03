@@ -445,31 +445,36 @@ function mapDataToA4Preview(data) {
 }
 
 window.closePopup = function() {
+    // ซ่อน Popup
     const popup = document.getElementById('successPopup');
     if (popup) popup.classList.add('hidden');
     
     const formSec = document.getElementById('formSection');
     const prevSec = document.getElementById('previewSection');
     
-    if (formSec && prevSec) {
-        formSec.classList.add('hidden');
+    // 🙈 ซ่อนหน้าฟอร์มกรอกข้อมูล
+    if (formSec) formSec.classList.add('hidden');
+    
+    // 👁️ แสดงเฉพาะหน้า A4 Preview
+    if (prevSec) {
         prevSec.classList.remove('hidden');
-        window.scrollTo(0, 0);
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // เลื่อนขึ้นบนสุด
     }
 };
 
+// 2. เมื่อผู้ใช้กดปุ่ม "กลับไปหน้าฟอร์ม" จากหน้า Preview
 window.backToForm = function() {
-    const postSaveBox = document.getElementById('postSaveActions');
-    if (postSaveBox) postSaveBox.style.display = 'none';
-
     const prevSec = document.getElementById('previewSection');
     const formSec = document.getElementById('formSection');
 
+    // 🙈 ซ่อนหน้า A4 Preview
     if (prevSec) prevSec.classList.add('hidden');
-    if (formSec) formSec.classList.remove('hidden');
     
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    fetchMaterialList();
+    // 👁️ แสดงเฉพาะหน้าฟอร์ม
+    if (formSec) {
+        formSec.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 };
 
 window.resetForm = function() {
