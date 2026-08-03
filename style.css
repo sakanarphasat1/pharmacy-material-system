@@ -480,3 +480,22 @@ input:focus, select:focus {
 .hidden {
     display: none !important;
 }
+/* ==========================================
+   📌 CSS ควบคุมเอกสาร A4 ป้องกันหน้าเกิน/หน้าว่าง
+   ========================================== */
+#previewSection {
+    box-sizing: border-box;
+    width: 210mm;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 15mm 15mm 10mm 15mm; /* Adjust padding to fit perfectly */
+    background: #ffffff;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
+}
+
+/* ป้องกันทุก Element ภายในกระดาษตัดขึ้นหน้าใหม่ */
+#previewSection * {
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+}
