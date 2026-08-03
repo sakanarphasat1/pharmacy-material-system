@@ -469,18 +469,30 @@ window.closePopupAndGoToPrint = function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-window.backToForm = function() {
+// ==========================================================
+// 📄 ฟังก์ชันย้อนกลับหน้าแรก (พร้อมดึงข้อมูลสต็อกใหม่ล่าสุด)
+// ==========================================================
+
+window.backToForm = async function() {
     const previewSec = document.getElementById('previewSection');
     const formSec = document.getElementById('formSection');
 
+    // 1. ซ่อนหน้า A4 พรีวิว
     if (previewSec) previewSec.classList.add('hidden');
     
+    // 2. แสดงหน้าฟอร์มกรอกข้อมูล
     if (formSec) {
         formSec.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
+    // 3. รีเซ็ตล้างฟอร์ม
     if (typeof resetForm === 'function') resetForm();
+
+    // 🔄 4. ดึงข้อมูลพัสดุล่าสุดจาก Google Sheets ใหม่ทันที (เพื่อให้ยอดคงเหลืออัปเดตเป็นปัจจุบัน)
+    if (typeof fetchMaterialList === 'function') {
+        await fetchMaterialList();
+    }
 };
 
 window.resetForm = function() {
