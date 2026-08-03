@@ -578,3 +578,50 @@ window.closeDriveModal = function() {
     if (modal) modal.style.display = 'none';
     if (iframe) iframe.src = '';
 };
+// ==========================================================
+// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็นไฟล์ PDF และสั่งดาวน์โหลด
+// ==========================================================
+
+window.exportToPDF = function() {
+    // 1. อ้างอิงไปยัง Element เอกสาร A4
+    const element = document.getElementById('previewSection');
+
+    if (!element) {
+        alert("ไม่พบเอกสารใบเบิกพัสดุครับ");
+        return;
+    }
+
+    // 2. ซ่อนปุ่มกดควบคุมไม่ให้ติดเข้าไปในไฟล์ PDF (เผื่อไว้)
+    const postSaveActions = document.getElementById('postSaveActions');
+    if (postSaveActions) postSaveActions.style.visibility = 'hidden';
+
+    // 3. ตั้งชื่อไฟล์ PDF ตามวันที่ปัจจุบัน (หรือเลขที่ใบเบิก)
+    const today = new Date();
+    const dateString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+    const fileName = `ใบเบิกพัสดุ_${dateString}.pdf`;
+
+    // 4. ตั้งค่าคุณลักษณะของการส่งออกเป็น PDF (A4 Portrait)
+    const opt = {
+        margin:       0,
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // 5. แสดง Loading แจ้งผู้ใช้ชั่วคราว
+    const loading = document.getElementById('loadingOverlay');
+    if (loading) loading.classList.remove('hidden');
+
+    // 6. ประมวลผลและสร้างไฟล์ PDF
+    html2pdf().set(opt).from(element).save().then(() => {
+        // คืนค่าการแสดงผลเมื่อดาวน์โหลดเสร็จสมบูรณ์
+        if (postSaveActions) postSaveActions.style.visibility = 'visible';
+        if (loading) loading.classList.add('hidden');
+    }).catch(err => {
+        console.error("PDF Export error:", err);
+        if (postSaveActions) postSaveActions.style.visibility = 'visible';
+        if (loading) loading.classList.add('hidden');
+        alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
+    });
+};
