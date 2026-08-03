@@ -1,0 +1,109 @@
+<div class="card">
+    <div class="card-header">
+        <h2>📝 สร้างใบเบิกวัสดุ</h2>
+        <p>กรุณากรอกข้อมูลส่วนหัวและตารางรายการวัสดุที่ต้องการขอเบิก</p>
+    </div>
+    
+    <form id="materialForm" onsubmit="handleFormSubmit(event)">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="organization">หน่วยงาน </label>
+                <input type="text" id="organization" name="organization" required value="คณะเภสัชศาสตร์" readonly style="background-color: #F2F4F4; color: #7F8C8D; cursor: not-allowed;">
+            </div>
+            <div class="form-group">
+                <label for="docDate">วันที่ <span class="required">*</span></label>
+                <input type="date" id="docDate" name="docDate" required>
+            </div>
+            <div class="form-group">
+                <label for="moneySource">แหล่งเงิน </label>
+                <input type="text" id="moneySource" name="moneySource" required value="รายได้ คณะเภสัชศาสตร์ มหาวิทยาลัยบูรพา" readonly style="background-color: #F2F4F4; color: #7F8C8D; cursor: not-allowed;">
+            </div>
+            <!-- <div class="form-group">
+                <label for="workPlan">แผนงาน / งาน</label>
+                <input type="text" id="workPlan" name="workPlan" placeholder="ระบุแผนงานหรือโครงการ">
+            </div> -->
+        </div>
+
+        <div class="table-container-form" style="margin-top: 30px;">
+            <label style="font-weight:500; margin-bottom:10px; display:block;">📦 ตารางรายการพัสดุที่ต้องการเบิก</label>
+            <table id="inputItemsTable" class="input-items-table">
+                <thead>
+                    <tr>
+                        <th style="width: 6%;">ลำดับ</th>
+                        <th>รายการ <span class="required">*</span></th>
+                        <th style="width: 10%;">จำนวน <span class="required">*</span></th>
+                        <th style="width: 12%;">หน่วยนับ </th>
+                        <th style="width: 15%;">รหัสวัสดุ</th>
+                        <th style="width: 15%;">เลขใบเบิก</th>
+                        <th style="width: 15%;">เลขที่ใบสั่งจ่าย</th>
+                        <th style="width: 6%;">ลบ</th>
+                    </tr>
+                </thead>
+                <tbody id="itemsTableBody">
+                    <tr>
+                        <td class="row-index">1</td>
+                        <td>
+                            <select id="itemSelect1" class="item-name" style="width: 100%; padding: 6px; border-radius: 4px;" required onchange="onMaterialChange(this)">
+                                <option value="">-- กำลังโหลดรายการพัสดุ... --</option>
+                            </select>
+                        </td>
+                        <td><input type="number" class="item-qty" min="1" required placeholder="0"></td>
+                        <td><input type="text" class="item-unit" required readonly placeholder="หน่วยนับ" style="background-color: #f3f4f6;"></td>
+                        <td><input type="text" class="item-code" readonly placeholder="รหัสวัสดุ" style="background-color: #f3f4f6;"></td>
+                        
+                        <td><input type="text" class="item-req-no" value="800000"></td>
+                        <td><input type="text" class="item-pay-no" value="490000"></td>
+                        <td><button type="button" class="btn-delete-row" onclick="deleteRow(this)">❌</button></td>
+                    </tr>
+              </tbody>
+            </table>
+            <button type="button" class="btn btn-secondary" style="padding:6px 15px; font-size:0.85rem; margin-top:10px;" onclick="addNewRow()">➕ เพิ่มรายการต่อ</button>
+            <button type="button" onclick="openDriveFolder()" style="background-color: #003366; color: white; padding: 6px 15px; font-size: 0.85rem; margin-top: 10px; margin-left: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; display: inline-flex; align-items: center; gap: 5px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                🖼️ รูปภาพรายการพัสดุ
+            </button>
+        </div>
+
+        <h3 style="margin: 30px 0 15px 0; font-size: 1.1rem; color: #555; border-bottom: 2px dashed #EFEFEF; padding-bottom: 5px;">👤 รายชื่อนามสกุลผู้ลงนาม</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="requesterName">ชื่อ-นามสกุล (ผู้ขอเบิก) <span class="required">*</span></label>
+                <input type="text" id="requesterName" required placeholder="-- กรุณากรอกชื่อ-นามสกุล --">
+            </div>
+            <div class="form-group">
+        <label>ชื่อ-นามสกุล (หัวหน้าหน่วยพัสดุ)</label>
+        <input type="text" id="supplyHeadName" value="นายสุบัณฑิต พุ่มเจริญ" readonly style="background-color: #F2F4F4; color: #7F8C8D; cursor: not-allowed;">
+    </div>
+
+    <!-- <div class="form-group">
+        <label>ชื่อ-นามสกุล (ผู้อนุมัติ)</label>
+        <input type="text" id="approverName" value="ผศ.ดร.ภญ.ณัฏฐิณี ธีรกุลกิตติพงศ์" readonly style="background-color: #F2F4F4; color: #7F8C8D; cursor: not-allowed;">
+    </div> -->
+
+    <div class="form-group">
+        <label>ชื่อ-นามสกุล (ผู้ตัดบัญชีวัสดุ)</label>
+        <input type="text" id="accountantName" value="นางสาววิษณีย์ เวรุตัง" readonly style="background-color: #F2F4F4; color: #7F8C8D; cursor: not-allowed;">
+    </div>
+
+    <div class="form-group">
+        <label>ชื่อ-นามสกุล (ผู้จ่ายของ)</label>
+        <input type="text" id="payerName" value="นางสาววิษณีย์ เวรุตัง" readonly style="background-color: #F2F4F4; color: #7F8C8D; cursor: not-allowed;">
+    </div>
+    <div style="background-color: #fff5f5; border-left: 5px solid #ef4444; padding: 12px 16px; margin: 20px 0; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+        <p style="margin: 0; color: #b91c1c; font-size: 0.95rem; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+        ⚠️ <span style="text-decoration: underline;">โน้ตข้อความสำคัญ:</span> โปรดตรวจสอบข้อมูลทั้งหมดให้ถูกต้องก่อนกดบันทึก หากบันทึกแล้วข้อมูลจะเข้าระบบและจะไม่สามารถกลับมาแก้ไขได้อีก สามารถดูตัวอย่างเอกสารที่ปุ่มสีฟ้า
+        </p>
+    </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="resetForm()">ล้างข้อมูล</button>
+            <button type="button" onclick="handleFormSubmit('preview')" style="background-color: #0284c7; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        👁️ ตัวอย่างเอกสาร
+    </button>
+    
+    <button type="button" onclick="handleFormSubmit('save')" style="background-color: #22c55e; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        💾 บันทึกข้อมูลลงระบบและออกเอกสาร
+    </button>
+        </div>
+    </form>
+</div>
