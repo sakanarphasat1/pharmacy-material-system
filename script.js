@@ -286,6 +286,7 @@ function reIndexRows() {
 window.handleFormSubmit = async function(actionType) {
     if (window.event) window.event.preventDefault();
     
+    // ดึงข้อมูลรายการจากตาราง
     const items = [];
     const rows = document.querySelectorAll('#itemsTableBody tr');
     let hasError = false;
@@ -323,6 +324,7 @@ window.handleFormSubmit = async function(actionType) {
         return;
     }
 
+    // จัดการวันที่
     const rawDate = document.getElementById('docDate') ? document.getElementById('docDate').value : ''; 
     let formattedBEData = rawDate;
     if (rawDate) {
@@ -346,12 +348,26 @@ window.handleFormSubmit = async function(actionType) {
         payerName: document.getElementById('payerName')?.value.trim() || '-'
     };
 
-    if (actionType === 'save') {
+    // 🔹 กรณีที่ 1: กดปุ่ม "ตัวอย่างเอกสาร" (เหมือนรูปที่ 1)
+    if (actionType === 'preview') {
+        mapDataToA4Preview(formData); // แสดงข้อมูลลงใน A4
+        
+        const previewSec = document.getElementById('previewSection');
+        const printActionButtons = document.getElementById('printActionButtons'); // ปุ่มย้อนกลับ/พิมพ์ ด้านบน A4
+        
+        if (previewSec) previewSec.classList.remove('hidden');
+        if (printActionButtons) printActionButtons.classList.add('hidden'); // ซ่อนปุ่ม 2 ปุ่มด้านบนชั่วคราวตอนพรีวิวร่าง
+        
+        // เลื่อนจอลงมาดูพรีวิว
+        if (previewSec) previewSec.scrollIntoView({ behavior: 'smooth' });
+    } 
+    
+    // 🔹 กรณีที่ 2: กดปุ่ม "บันทึกข้อมูลลงระบบและออกเอกสาร" (เหมือนรูปที่ 2)
+    else if (actionType === 'save') {
         const loading = document.getElementById('loadingOverlay');
         if (loading) loading.classList.remove('hidden');
 
         try {
-            // ส่งข้อมูลไปบันทึกผ่าน Apps Script Web App
             const response = await fetch(APPS_SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: "saveData", formData: formData })
@@ -361,36 +377,20 @@ window.handleFormSubmit = async function(actionType) {
             if (loading) loading.classList.add('hidden');
 
             if (result.success) {
-                // 1. นำข้อมูลไปใส่ในหน้ากระดาษ A4
+                // เตรียมข้อมูลใส่ A4 ไว้ล่วงหน้า
                 mapDataToA4Preview(formData);
                 
-                // 2. แสดง Popup แจ้งเตือนบันทึกสำเร็จ
+                // เด้ง Popup "บันทึกข้อมูลเรียบร้อย!" (รูปที่ 2)
                 const popup = document.getElementById('successPopup');
                 if (popup) popup.classList.remove('hidden');
-
-                // 3. รีเซ็ตฟอร์มเตรียมไว้สำหรับการเบิกครั้งถัดไป
-                resetForm();
             } else {
-                alert("เกิดข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์: " + result.message);
+                alert("เกิดข้อผิดพลาดจากเซิร์ฟเวอร์: " + result.message);
             }
 
         } catch (error) {
             if (loading) loading.classList.add('hidden');
-            console.error("Save failed:", error);
-            alert("การบันทึกล้มเหลว: " + error.message);
-        }
-
-    } else {
-        // กรณีดูลำลอง (ตัวอย่างเอกสาร)
-        mapDataToA4Preview(formData);
-        
-        const formSec = document.getElementById('formSection');
-        const previewSec = document.getElementById('previewSection');
-        
-        if (formSec) formSec.classList.add('hidden');
-        if (previewSec) {
-            previewSec.classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            console.error("Save error:", error);
+            alert("บันทึกล้มเหลว: " + error.message);
         }
     }
 };
@@ -443,42 +443,42 @@ function mapDataToA4Preview(data) {
     }
 }
 
-window.closePopup = function() {
-    // 🙈 ซ่อน Popup
+window.closePopupAndGoToPrint = function() {
+    // 1. ซ่อน Popup
     const popup = document.getElementById('successPopup');
     if (popup) popup.classList.add('hidden');
-    
+
+    // 2. ซ่อนหน้าฟอร์มกรอกข้อมูลออกไปทั้งหมด
     const formSec = document.getElementById('formSection');
-    const prevSec = document.getElementById('previewSection');
-    
-    // 🙈 ซ่อนหน้าฟอร์มกรอกข้อมูล
     if (formSec) formSec.classList.add('hidden');
+
+    // 3. แสดงเฉพาะหน้า A4 พรีวิว และ แสดงปุ่มควบคุม 2 ปุ่มด้านบน (รูปที่ 3)
+    const previewSec = document.getElementById('previewSection');
+    const printActionButtons = document.getElementById('printActionButtons');
     
-    // 👁️ แสดงเฉพาะหน้ากระดาษ A4 Preview
-    if (prevSec) {
-        prevSec.classList.remove('hidden');
-        window.scrollTo({ top: 0, behavior: 'smooth' }); // เลื่อนขึ้นบนสุด
-    }
+    if (previewSec) previewSec.classList.remove('hidden');
+    if (printActionButtons) printActionButtons.classList.remove('hidden'); // แสดงปุ่มย้อนกลับ + ปุ่มพิมพ์ A4
+
+    // เลื่อนจอขึ้นไปบนสุด
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// 2. เมื่อผู้ใช้กดปุ่ม "ย้อนกลับหน้าแรก" เพื่อเบิกใหม่
+// เมื่อกดปุ่ม "ย้อนกลับหน้าแรก" ในหน้าสั่งพิมพ์ (รูปที่ 3)
 window.backToForm = function() {
-    const prevSec = document.getElementById('previewSection');
+    const previewSec = document.getElementById('previewSection');
     const formSec = document.getElementById('formSection');
 
-    // 🙈 ซ่อนหน้ากระดาษ A4 Preview
-    if (prevSec) prevSec.classList.add('hidden');
+    // ซ่อนหน้า A4 พรีวิว
+    if (previewSec) previewSec.classList.add('hidden');
     
-    // 👁️ แสดงเฉพาะหน้าฟอร์มกรอกข้อมูล
+    // แสดงหน้าฟอร์มกรอกข้อมูล
     if (formSec) {
         formSec.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    
-    // โหลดข้อมูลสต็อกล่าสุดจาก Sheet กลับมาเตรียมไว้
-    if (typeof fetchMaterialList === 'function') {
-        fetchMaterialList();
-    }
+
+    // รีเซ็ตฟอร์มเบิกใหม่
+    if (typeof resetForm === 'function') resetForm();
 };
 
 window.resetForm = function() {
