@@ -10,7 +10,7 @@ import {
     signOut 
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ⚙️ 1.1 นำค่า firebaseConfig จริงจาก Firebase Console มาวางตรงนี้
+// ⚙️ 1.1 ค่า firebaseConfig
 const firebaseConfig = {
   apiKey: "AIzaSyC-IKwMD7-vkuG0moT24EAsSyxaV8Xty6c",
   authDomain: "pharmacy-material-system.firebaseapp.com",
@@ -29,9 +29,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// ตัวแปรส่วนกลาง
+// ตัวแปรส่วนกลาง (Global Variables)
 let rowCount = 1;
 let globalMaterialList = [];
+let currentUserFullName = ""; // 🟢 เพิ่มตัวแปรสำหรับเก็บชื่อจาก UserMaster
 
 // ==========================================================
 // 💥 ส่วนที่ 2: ระบบยืนยันตัวตน (Authentication) & โหลดหน้าเว็บ
@@ -84,6 +85,7 @@ onAuthStateChanged(auth, async (user) => {
                 
                 // สั่ง Sign Out ออกจาก Firebase ทันที
                 await signOut(auth);
+                currentUserFullName = "";
                 
                 if (statusEl) statusEl.innerText = "";
                 if (loginSec) loginSec.classList.remove('hidden');
@@ -91,7 +93,9 @@ onAuthStateChanged(auth, async (user) => {
                 return;
             }
 
-            // 3. กรณีได้รับอนุญาต (มีชื่อใน UserMaster)
+            // 3. กรณีได้รับอนุญาต (บันทึกชื่อจาก UserMaster)
+            currentUserFullName = checkResult.fullName || user.displayName || user.email;
+
             if (loginSec) loginSec.classList.add('hidden');
             
             // โหลดโมดูลหน้าฟอร์มและพรีวิว
@@ -100,10 +104,10 @@ onAuthStateChanged(auth, async (user) => {
             
             if (formSec) formSec.classList.remove('hidden');
             
-            // ใส่ชื่อ-นามสกุลจริงจาก UserMaster (หากไม่มีให้ใช้ displayName ของ Google)
+            // ใส่ชื่อผู้ขอเบิก
             const requesterInput = document.getElementById('requesterName');
             if (requesterInput) {
-                requesterInput.value = checkResult.fullName || user.displayName || user.email;
+                requesterInput.value = currentUserFullName;
             }
 
             // โหลดรายการวัสดุและตั้งค่าวันที่ปัจจุบัน
@@ -118,6 +122,7 @@ onAuthStateChanged(auth, async (user) => {
         }
     } else {
         // กรณีผู้ใช้ไม่ได้ล็อกอิน หรือกด Sign Out
+        currentUserFullName = "";
         if (loginSec) loginSec.classList.remove('hidden');
         if (formSec) formSec.classList.add('hidden');
         if (statusEl) statusEl.innerText = "";
@@ -377,22 +382,20 @@ window.handleFormSubmit = async function(actionType) {
 
     // 🔹 กรณีที่ 1: กดปุ่ม "ตัวอย่างเอกสาร"
     if (actionType === 'preview') {
-        mapDataToA4Preview(formData); // แสดงข้อมูลลงใน A4
+        mapDataToA4Preview(formData);
         
         const previewSec = document.getElementById('previewSection');
-        const printActionButtons = document.getElementById('printActionButtons'); // ปุ่มระบบเดิม (ถ้ามี)
-        const postSaveActions = document.getElementById('postSaveActions');       // ปุ่ม 2 ปุ่มใหม่
+        const printActionButtons = document.getElementById('printActionButtons');
+        const postSaveActions = document.getElementById('postSaveActions');
 
         if (previewSec) previewSec.classList.remove('hidden');
         
-        // 🚫 บังคับซ่อนชุดปุ่มสั่งพิมพ์/ย้อนกลับ เมื่ออยู่ในโหมด "พรีวิวร่าง" เท่านั้น
         if (printActionButtons) printActionButtons.classList.add('hidden');
         if (postSaveActions) {
             postSaveActions.style.display = 'none';
             postSaveActions.classList.add('hidden');
         }
         
-        // เลื่อนจอลงมาดูพรีวิว A4
         if (previewSec) previewSec.scrollIntoView({ behavior: 'smooth' });
     }
     
@@ -416,13 +419,8 @@ window.handleFormSubmit = async function(actionType) {
                 result = { success: true }; 
             }
 
-            // 1. นำข้อมูลเข้าหน้า A4 พรีวิว
             mapDataToA4Preview(formData);
-
-            // 🔄 2. ดึงข้อมูลสต็อกล่าสุดจาก Google Sheets มาอัปเดตเก็บใน RAM ทันที
             fetchMaterialList(); 
-
-            // 3. แสดง Popup บันทึกสำเร็จ
             showSuccessPopup();
 
         } catch (error) {
@@ -483,7 +481,6 @@ function mapDataToA4Preview(data) {
     }
 }
 
-// ฟังก์ชันสั่งเปิด Popup แสดงความสำเร็จ
 function showSuccessPopup() {
     const popup = document.getElementById('successPopup');
     if (popup) {
@@ -493,67 +490,53 @@ function showSuccessPopup() {
     }
 }
 
-// ปุ่มกดจาก Popup สลับไปหน้าสั่งพิมพ์
 window.closePopupAndGoToPrint = function() {
-    // 1. ซ่อน Popup แจ้งเตือน
     const popup = document.getElementById('successPopup');
     if (popup) {
         popup.classList.add('hidden');
         popup.style.display = 'none';
     }
 
-    // 2. ซ่อนแบบฟอร์มกรอกข้อมูล
     const formSec = document.getElementById('formSection');
     if (formSec) formSec.classList.add('hidden');
 
-    // 3. แสดงหน้าพรีวิวเอกสาร A4
     const previewSec = document.getElementById('previewSection');
     if (previewSec) previewSec.classList.remove('hidden');
 
-    // 4. สั่งเปิดแสดงชุดปุ่มย้อนกลับ และ ปุ่มพิมพ์ (postSaveActions)
     const postSaveActions = document.getElementById('postSaveActions');
     if (postSaveActions) {
-        postSaveActions.style.display = 'flex'; // สั่งเปลี่ยนจาก display: none เป็น flex
+        postSaveActions.style.display = 'flex';
         postSaveActions.classList.remove('hidden');
     }
 
-    // เลื่อนหน้าจอขึ้นบนสุดอย่างนุ่มนวล
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
-
-// ==========================================================
-// 📄 ฟังก์ชันย้อนกลับหน้าแรก (พร้อมดึงข้อมูลสต็อกใหม่ล่าสุด)
-// ==========================================================
 
 window.backToForm = async function() {
     const previewSec = document.getElementById('previewSection');
     const formSec = document.getElementById('formSection');
 
-    // 1. ซ่อนหน้า A4 พรีวิว
     if (previewSec) previewSec.classList.add('hidden');
     
-    // 2. ซ่อนปุ่มย้อนกลับ/พิมพ์ที่อยู่เหนือ A4 ป้องกันการแสดงค้าง
     const postSaveActions = document.getElementById('postSaveActions');
     if (postSaveActions) {
         postSaveActions.style.display = 'none';
         postSaveActions.classList.add('hidden');
     }
 
-    // 3. แสดงหน้าฟอร์มกรอกข้อมูล
     if (formSec) {
         formSec.classList.remove('hidden');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // 4. รีเซ็ตล้างฟอร์ม (พร้อมใส่ชื่อผู้ขอเบิกกลับคืนมา)
     if (typeof resetForm === 'function') resetForm();
 
-    // 5. ดึงข้อมูลพัสดุล่าสุดจาก Google Sheets ใหม่ทันที
     if (typeof fetchMaterialList === 'function') {
         await fetchMaterialList();
     }
 };
 
+// 📌 ฟังก์ชัน resetForm ที่ได้รับการแก้ไขแล้ว 🟢
 window.resetForm = function() {
     const form = document.getElementById('materialForm');
     if (form) form.reset();
@@ -586,11 +569,10 @@ window.resetForm = function() {
     // ตั้งค่าวันที่ปัจจุบัน
     initDefaultDate();
 
-    // 🔑 คืนค่าชื่อผู้ขอเบิกจากระบบ Firebase Authentication กลับเข้าช่อง
-    const currentUser = auth.currentUser;
+    // 🟢 ดึงชื่อจากตัวแปร currentUserFullName ที่ได้จาก UserMaster มาใส่แทน
     const requesterInput = document.getElementById('requesterName');
-    if (currentUser && requesterInput) {
-        requesterInput.value = currentUser.displayName || currentUser.email;
+    if (requesterInput && currentUserFullName) {
+        requesterInput.value = currentUserFullName;
     }
 };
 
@@ -616,8 +598,9 @@ window.closeDriveModal = function() {
     if (modal) modal.style.display = 'none';
     if (iframe) iframe.src = '';
 };
+
 // ==========================================================
-// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (เวอร์ชันแก้ปัญหาหน้า 2 ว่างเปล่า 100%)
+// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF
 // ==========================================================
 
 window.exportToPDF = async function() {
@@ -628,58 +611,47 @@ window.exportToPDF = async function() {
         return;
     }
 
-    // 1. ซ่อนปุ่มกดไม่ให้ติดเข้าไปในไฟล์ PDF
     const postSaveActions = document.getElementById('postSaveActions');
     if (postSaveActions) postSaveActions.style.visibility = 'hidden';
 
-    // 2. แสดงหน้าต่างหมุนโหลด (Loading)
     const loading = document.getElementById('loadingOverlay');
     if (loading) loading.classList.remove('hidden');
 
-    // 3. ตั้งชื่อไฟล์ PDF ตามวันที่ปัจจุบัน
     const today = new Date();
     const dateString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
     const fileName = `ใบเบิกพัสดุ_${dateString}.pdf`;
 
-    // 4. ปรับแต่งสไตล์ Element ชั่วคราว ป้องกันไม่ให้ความสูงเกิน 1 หน้า A4
     const originalMaxHeight = element.style.maxHeight;
     const originalOverflow = element.style.overflow;
     
-    element.style.maxHeight = '295mm'; // จำกัดความสูงให้อยู่ในขอบเขต A4 (297mm)
+    element.style.maxHeight = '295mm';
     element.style.overflow = 'hidden';
 
-    // 5. การตั้งค่า html2pdf เพื่อบังคับให้มีเพียง 1 หน้าถัดไป
     const opt = {
-        margin:       0, // ตั้งค่า Margin เป็น 0 เพื่อให้พอดีกับพิกเซลของ A4
+        margin:       0,
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
-            scale: 2,             // ความคมชัดสูง
-            useCORS: true,        // รองรับการโหลดโลโก้ภายใน Repository
+            scale: 2,
+            useCORS: true,
             logging: false,
             scrollY: 0
         },
         jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        // 📌 จุดสำคัญ: บังคับห้ามตัดขึ้นหน้าใหม่ในทุกกรณี
         pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
     try {
-        // หน่วงเวลาเล็กน้อยเพื่อให้ DOM นิ่ง
         await new Promise(resolve => setTimeout(resolve, 200));
-
-        // สั่งสร้างและดาวน์โหลดไฟล์ PDF
         await html2pdf().set(opt).from(element).save();
 
     } catch (err) {
         console.error("PDF Export error:", err);
         alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
     } finally {
-        // คืนค่าสไตล์เดิมของ Element
         element.style.maxHeight = originalMaxHeight;
         element.style.overflow = originalOverflow;
 
-        // คืนค่าการแสดงผลปุ่มกดและปิดตัวหมุนโหลด
         if (postSaveActions) postSaveActions.style.visibility = 'visible';
         if (loading) loading.classList.add('hidden');
     }
