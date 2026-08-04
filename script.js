@@ -22,7 +22,7 @@ const firebaseConfig = {
 };
 
 // 🔗 1.2 Web App URL จาก Google Apps Script
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzJsTIWjlU5S2QgLAyucE48qtanmF7VK07drWwfpMsf0NbyKCOvcfRidNFuc1UHROWt/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZM3AcOzuf4mHC8oeIhpBj8MDUvvf-PChhXuAUOMagiBoYL_rmu-CgD6wID10NZwoi/exec";
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
