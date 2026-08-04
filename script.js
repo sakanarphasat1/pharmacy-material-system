@@ -155,10 +155,17 @@ function initDefaultDate() {
 }
 
 // ==========================================================
-// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (เพิ่มระบบ Auto-Reload เมื่อ Error)
+// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (ระบบ Retry 3 ครั้ง + ไม่รีเฟรชหน้า)
 // ==========================================================
 
-async function fetchMaterialList() {
+async function fetchMaterialList(retryCount = 1, maxRetries = 3) {
+    // 1. กำหนดข้อความแจ้งสถานะใน Dropdown ตามจำนวนรอบที่กำลังพยายาม
+    if (retryCount === 1) {
+        setDropdownsStatus("-- กำลังโหลดข้อมูลพัสดุ... --");
+    } else {
+        setDropdownsStatus(`-- กำลังพยายามเชื่อมต่อใหม่ (ครั้งที่ ${retryCount}/${maxRetries})... --`);
+    }
+
     try {
         const response = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
@@ -166,9 +173,8 @@ async function fetchMaterialList() {
             body: JSON.stringify({ action: "getMaterials" })
         });
 
-        // หาก HTTP Status มีปัญหา (เช่น 404, 500) ให้โยน Error ไปที่ catch
         if (!response.ok) {
-            throw new Error(`HTTP Error status: ${response.status}`);
+            throw new Error(`HTTP Status Error: ${response.status}`);
         }
 
         const textData = await response.text();
@@ -177,27 +183,58 @@ async function fetchMaterialList() {
         try {
             result = JSON.parse(textData);
         } catch (e) {
-            throw new Error("ข้อมูลที่ได้กลับมาไม่อยู่ในรูปแบบ JSON");
+            throw new Error("ข้อมูลตอบกลับไม่อยู่ในรูปแบบ JSON");
         }
 
-        // ตรวจสอบว่ามีข้อมูลส่งกลับมาสำเร็จหรือไม่
+        // กรณีดึงข้อมูลสำเร็จ
         if (result && result.success && Array.isArray(result.data)) {
             globalMaterialList = result.data;
-            const selectEl = document.getElementById('itemSelect1') || document.querySelector('.item-name');
-            if (selectEl) {
-                updateMaterialDropdown(selectEl);
-            }
+            renderAllDropdowns();
+            console.log("✅ โหลดข้อมูลพัสดุสำเร็จ");
+            return; // ออกจากฟังก์ชันทันทีเมื่อสำเร็จ
         } else {
-            throw new Error(result ? result.message : "ไม่สามารถอ่านข้อมูลพัสดุได้");
+            throw new Error(result ? result.message : "ไม่พบข้อมูลพัสดุ");
         }
 
     } catch (error) {
-        console.error("❌ Error fetching materials:", error);
+        console.warn(`⚠️ ดึงข้อมูลพัสดุล้มเหลว ครั้งที่ ${retryCount}/${maxRetries}:`, error.message);
+
+        // 2. ถ้ายังลองไม่ครบ 3 ครั้ง ให้รอ 2 วินาที แล้วลองยิงใหม่ (Retry)
+        if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // หน่วงเวลา 2 วินาที
+            return await fetchMaterialList(retryCount + 1, maxRetries); // เรียกตัวเองซ้ำโดยเพิ่มนับรอบ
+        } 
         
-        // 🔄 แจ้งผู้ใช้ และรีเฟรชหน้าเว็บใหม่อัตโนมัติเมื่อเกิด Error
-        alert("⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลพัสดุ ระบบจะทำการรีเฟรชหน้าเว็บใหม่อัตโนมัติครับ");
-        window.location.reload();
+        // 3. ถ้าพยายามครบ 3 ครั้งแล้วยังไม่ได้ ให้แจ้งเตือนผู้ใช้โดยไม่ต้องรีเฟรชทั้งหน้า
+        else {
+            console.error("❌ พยายามเชื่อมต่อครบ 3 ครั้งแล้วไม่สำเร็จ");
+            
+            // หากมี Cache เดิมอยู่ ให้เอาของเดิมมาใช้แก้ขัดก่อน
+            if (globalMaterialList && globalMaterialList.length > 0) {
+                renderAllDropdowns();
+                alert("⚠️ ไม่สามารถอัปเดตรายการพัสดุล่าสุดได้ ระบบจะใช้ข้อมูลรายการเดิมชั่วคราวครับ");
+            } else {
+                setDropdownsStatus("-- การเชื่อมต่อขัดข้อง (กดที่นี่เพื่อลองใหม่) --");
+                alert("⛔ ไม่สามารถดึงข้อมูลรายการพัสดุได้หลังจากพยายาม 3 ครั้ง\nกรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ต แล้วลองใหม่อีกครั้งครับ");
+            }
+        }
     }
+}
+
+// 📌 ฟังก์ชันช่วยตั้งข้อความสถานะใน Dropdown ทั้งหมด
+function setDropdownsStatus(message) {
+    const selectElements = document.querySelectorAll('.item-name');
+    selectElements.forEach(select => {
+        select.innerHTML = `<option value="" onclick="fetchMaterialList()">${message}</option>`;
+    });
+}
+
+// 📌 ฟังก์ชันวาดรายการ Dropdown จาก globalMaterialList
+function renderAllDropdowns() {
+    const selectElements = document.querySelectorAll('.item-name');
+    selectElements.forEach(select => {
+        updateMaterialDropdown(select);
+    });
 }
 
 window.updateMaterialDropdown = function(selectElement) {
