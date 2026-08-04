@@ -31,8 +31,8 @@ const provider = new GoogleAuthProvider();
 
 // ตัวแปรส่วนกลาง (Global Variables)
 let rowCount = 1;
-let globalMaterialList = []; // Memory Cache สำหรับเก็บรายการพัสดุ
-let currentUserFullName = ""; 
+let globalMaterialList = [];
+let currentUserFullName = ""; // 🟢 เพิ่มตัวแปรสำหรับเก็บชื่อจาก UserMaster
 
 // ==========================================================
 // 💥 ส่วนที่ 2: ระบบยืนยันตัวตน (Authentication) & โหลดหน้าเว็บ
@@ -155,82 +155,52 @@ function initDefaultDate() {
 }
 
 // ==========================================================
-// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (ปรับปรุงแบบเรียบง่ายและเสถียร)
+// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (เชื่อมต่อ Apps Script)
 // ==========================================================
 
 async function fetchMaterialList() {
-    // แสดงสถานะกำลังโหลดใน Dropdown
-    setDropdownsStatus("-- กำลังโหลดข้อมูลพัสดุ... --");
-
     try {
         const response = await fetch(APPS_SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: "getMaterials" })
         });
-
         const textData = await response.text();
-        let result;
-        try {
-            result = JSON.parse(textData);
-        } catch (e) {
-            console.error("Response is not JSON:", textData);
-            setDropdownsStatus("-- เกิดข้อผิดพลาดในการอ่านข้อมูล --");
-            return;
-        }
-
-        if (result && result.success && Array.isArray(result.data)) {
-            globalMaterialList = result.data; // บันทึกลง Memory Cache
-            renderAllDropdowns();
+        const result = JSON.parse(textData);
+        
+        if (result.success) {
+            globalMaterialList = result.data;
+            const selectEl = document.getElementById('itemSelect1') || document.querySelector('.item-name');
+            if (selectEl) {
+                updateMaterialDropdown(selectEl);
+            }
         } else {
-            console.error("โหลดข้อมูลพัสดุล้มเหลว:", result ? result.message : 'Unknown error');
-            setDropdownsStatus("-- ไม่มีข้อมูลพัสดุในระบบ --");
+            console.error("โหลดข้อมูลพัสดุล้มเหลว:", result.message);
         }
     } catch (error) {
         console.error("Error fetching materials:", error);
-        setDropdownsStatus("-- ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (กรุณารีเฟรช) --");
     }
-}
-
-// 📌 ฟังก์ชันอัปเดต Dropdown ทุกตัวบนหน้าจอ
-function renderAllDropdowns() {
-    const selectElements = document.querySelectorAll('.item-name');
-    selectElements.forEach(select => {
-        updateMaterialDropdown(select);
-    });
-}
-
-// 📌 ฟังก์ชันตั้งข้อความสถานะชั่วคราวใน Dropdown ทุกตัว
-function setDropdownsStatus(message) {
-    const selectElements = document.querySelectorAll('.item-name');
-    selectElements.forEach(select => {
-        select.innerHTML = `<option value="">${message}</option>`;
-    });
 }
 
 window.updateMaterialDropdown = function(selectElement) {
     if (!selectElement) return;
     
-    const currentValue = selectElement.value;
     selectElement.innerHTML = `<option value="">-- เลือกรายการพัสดุ --</option>`;
-
     if (globalMaterialList && globalMaterialList.length > 0) {
         globalMaterialList.forEach(mat => {
             const opt = document.createElement('option');
             opt.value = mat.name;
             opt.text = `${mat.code} - ${mat.name} (คงเหลือ: ${mat.stock} ${mat.unit})`; 
             
-            opt.setAttribute('data-code', mat.code || '');
-            opt.setAttribute('data-unit', mat.unit || '');
-            opt.setAttribute('data-stock', mat.stock || 0);
+            opt.setAttribute('data-code', mat.code);
+            opt.setAttribute('data-unit', mat.unit);
+            opt.setAttribute('data-stock', mat.stock);
             
             if (mat.stock <= 0) {
                 opt.style.color = "red";
             }
             selectElement.appendChild(opt);
         });
-
-        if (currentValue) selectElement.value = currentValue;
     } else {
         selectElement.innerHTML = `<option value="">-- ไม่มีข้อมูลพัสดุในระบบ --</option>`;
     }
@@ -560,12 +530,18 @@ window.backToForm = async function() {
     }
 
     if (typeof resetForm === 'function') resetForm();
+
+    if (typeof fetchMaterialList === 'function') {
+        await fetchMaterialList();
+    }
 };
 
+// 📌 ฟังก์ชัน resetForm ที่ได้รับการแก้ไขแล้ว 🟢
 window.resetForm = function() {
     const form = document.getElementById('materialForm');
     if (form) form.reset();
     
+    // เคลียร์ตารางรายการวัสดุให้เหลือแถวเดียว
     const tbody = document.getElementById('itemsTableBody');
     if (tbody) {
         tbody.innerHTML = `
@@ -590,8 +566,10 @@ window.resetForm = function() {
     const firstSelect = document.getElementById('itemSelect1');
     if (firstSelect) updateMaterialDropdown(firstSelect);
     
+    // ตั้งค่าวันที่ปัจจุบัน
     initDefaultDate();
 
+    // 🟢 ดึงชื่อจากตัวแปร currentUserFullName ที่ได้จาก UserMaster มาใส่แทน
     const requesterInput = document.getElementById('requesterName');
     if (requesterInput && currentUserFullName) {
         requesterInput.value = currentUserFullName;
