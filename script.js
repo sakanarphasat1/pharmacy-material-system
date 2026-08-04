@@ -32,7 +32,6 @@ const provider = new GoogleAuthProvider();
 // ตัวแปรส่วนกลาง (Global Variables)
 let rowCount = 1;
 let globalMaterialList = []; // Memory Cache สำหรับเก็บรายการพัสดุ
-let isFetchingMaterials = false; // Flag ป้องกันการยิง API ซ้ำพร้อมกัน
 let currentUserFullName = ""; 
 
 // ==========================================================
@@ -156,72 +155,44 @@ function initDefaultDate() {
 }
 
 // ==========================================================
-// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (มีระบบ Retry + Cache ลื่นๆ)
+// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (ปรับปรุงแบบเรียบง่ายและเสถียร)
 // ==========================================================
 
-async function fetchMaterialList(retries = 3, delay = 2000) {
-    // หากมีข้อมูลเก็บใน Cache แล้ว ให้อัปเดต Dropdown ทันทีไม่ต้องยิง API ซ้ำ
-    if (globalMaterialList.length > 0) {
-        renderAllDropdowns();
-        return;
-    }
+async function fetchMaterialList() {
+    // แสดงสถานะกำลังโหลดใน Dropdown
+    setDropdownsStatus("-- กำลังโหลดข้อมูลพัสดุ... --");
 
-    if (isFetchingMaterials) return;
-    isFetchingMaterials = true;
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: "getMaterials" })
+        });
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
+        const textData = await response.text();
+        let result;
         try {
-            console.log(`⏳ กำลังโหลดรายการพัสดุ... (ครั้งที่ ${attempt}/${retries})`);
-            
-            // ตั้งเวลา Timeout 10 วินาที ตัดสายหากเซิร์ฟเวอร์ตอบช้า
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-            const response = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: "getMaterials" }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-
-            const textData = await response.text();
-            let result;
-            try {
-                result = JSON.parse(textData);
-            } catch (e) {
-                throw new Error("ตอบกลับเป็นรูปแบบที่ไม่ถูกต้อง (ไม่ใช่ JSON)");
-            }
-
-            if (result && result.success && Array.isArray(result.data) && result.data.length > 0) {
-                globalMaterialList = result.data; // บันทึกลง Cache
-                console.log("✅ โหลดข้อมูลพัสดุสำเร็จ:", globalMaterialList.length, "รายการ");
-                
-                renderAllDropdowns();
-                isFetchingMaterials = false;
-                return; // โหลดสำเร็จ ออกจากลูปทันที
-            } else {
-                throw new Error(result.message || "ไม่มีข้อมูลพัสดุในระบบ");
-            }
-
-        } catch (error) {
-            console.warn(`⚠️ การโหลดรายการพัสดุครั้งที่ ${attempt} ล้มเหลว:`, error.message);
-            
-            if (attempt < retries) {
-                await new Promise(res => setTimeout(res, delay));
-            } else {
-                console.error("❌ ไม่สามารถดึงข้อมูลพัสดุได้หลังจากพยายามหลายครั้ง");
-                setDropdownsStatus("-- ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (กรุณารีเฟรช) --");
-                isFetchingMaterials = false;
-            }
+            result = JSON.parse(textData);
+        } catch (e) {
+            console.error("Response is not JSON:", textData);
+            setDropdownsStatus("-- เกิดข้อผิดพลาดในการอ่านข้อมูล --");
+            return;
         }
+
+        if (result && result.success && Array.isArray(result.data)) {
+            globalMaterialList = result.data; // บันทึกลง Memory Cache
+            renderAllDropdowns();
+        } else {
+            console.error("โหลดข้อมูลพัสดุล้มเหลว:", result ? result.message : 'Unknown error');
+            setDropdownsStatus("-- ไม่มีข้อมูลพัสดุในระบบ --");
+        }
+    } catch (error) {
+        console.error("Error fetching materials:", error);
+        setDropdownsStatus("-- ไม่สามารถเชื่อมต่อฐานข้อมูลได้ (กรุณารีเฟรช) --");
     }
 }
 
-// 📌 ฟังก์ชันอัปเดต Dropdown ทุกตัวบนหน้าจอจาก Cache
+// 📌 ฟังก์ชันอัปเดต Dropdown ทุกตัวบนหน้าจอ
 function renderAllDropdowns() {
     const selectElements = document.querySelectorAll('.item-name');
     selectElements.forEach(select => {
@@ -229,7 +200,14 @@ function renderAllDropdowns() {
     });
 }
 
-// 📌 ฟังก์ชันใส่รายการพัสดุลงใน Dropdown แต่ละตัว
+// 📌 ฟังก์ชันตั้งข้อความสถานะชั่วคราวใน Dropdown ทุกตัว
+function setDropdownsStatus(message) {
+    const selectElements = document.querySelectorAll('.item-name');
+    selectElements.forEach(select => {
+        select.innerHTML = `<option value="">${message}</option>`;
+    });
+}
+
 window.updateMaterialDropdown = function(selectElement) {
     if (!selectElement) return;
     
@@ -257,14 +235,6 @@ window.updateMaterialDropdown = function(selectElement) {
         selectElement.innerHTML = `<option value="">-- ไม่มีข้อมูลพัสดุในระบบ --</option>`;
     }
 };
-
-// 📌 ฟังก์ชันสำหรับตั้งข้อความสถานะใน Dropdown ทั้งหมด
-function setDropdownsStatus(message) {
-    const selectElements = document.querySelectorAll('.item-name');
-    selectElements.forEach(select => {
-        select.innerHTML = `<option value="">${message}</option>`;
-    });
-}
 
 window.onMaterialChange = function(selectEl) {
     const row = selectEl.closest('tr');
@@ -347,7 +317,6 @@ window.addNewRow = function() {
     `;
     tbody.appendChild(tr);
     
-    // ดึงข้อมูลจาก Cache มาใส่ใน Dropdown ตัวใหม่ทันที ⚡
     const newSelect = tr.querySelector('.item-name');
     updateMaterialDropdown(newSelect);
 };
@@ -481,11 +450,7 @@ window.handleFormSubmit = async function(actionType) {
             }
 
             mapDataToA4Preview(formData);
-            
-            // ล้าง Cache พัสดุเดิม เพื่อให้ดึงจำนวนคงเหลือล่าสุดหลังตัดสต็อก
-            globalMaterialList = []; 
             fetchMaterialList(); 
-            
             showSuccessPopup();
 
         } catch (error) {
@@ -597,12 +562,10 @@ window.backToForm = async function() {
     if (typeof resetForm === 'function') resetForm();
 };
 
-// 📌 ฟังก์ชัน resetForm 
 window.resetForm = function() {
     const form = document.getElementById('materialForm');
     if (form) form.reset();
     
-    // เคลียร์ตารางรายการวัสดุให้เหลือแถวเดียว
     const tbody = document.getElementById('itemsTableBody');
     if (tbody) {
         tbody.innerHTML = `
@@ -659,7 +622,7 @@ window.closeDriveModal = function() {
 };
 
 // ==========================================================
-// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (บังคับ 1 หน้า A4)
+// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF
 // ==========================================================
 
 window.exportToPDF = async function() {
