@@ -37,6 +37,7 @@ let globalMaterialList = [];
 // 💥 ส่วนที่ 2: ระบบยืนยันตัวตน (Authentication) & โหลดหน้าเว็บ
 // ==========================================================
 
+// 📌 ฟังก์ชันล็อกอินด้วย Google ผ่าน Firebase Popup
 window.loginWithGoogle = async function() {
     const statusEl = document.getElementById('loginStatus');
     const alertEl = document.getElementById('authAlert');
@@ -55,39 +56,75 @@ window.loginWithGoogle = async function() {
     }
 };
 
+// 📌 ตัวตรวจจับสถานะการล็อกอิน (พร้อมระบบกรองสิทธิ์ UserMaster)
 onAuthStateChanged(auth, async (user) => {
     const loginSec = document.getElementById('loginSection');
     const formSec = document.getElementById('formSection');
     const statusEl = document.getElementById('loginStatus');
 
     if (user) {
-        if (statusEl) statusEl.innerText = "กำลังตรวจสอบสิทธิ์...";
+        if (statusEl) statusEl.innerText = "กำลังตรวจสอบสิทธิ์ในระบบ...";
 
         try {
+            // 1. ยิง API ไปตรวจสอบอีเมลกับแผ่นงาน UserMaster ใน Google Sheets
+            const checkResponse = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: "checkUser",
+                    email: user.email
+                })
+            });
+
+            const checkResult = await checkResponse.json();
+
+            // 2. กรณีไม่มีสิทธิ์เข้าใช้งานระบบ
+            if (!checkResult || (!checkResult.allowed && !checkResult.isAllowed)) {
+                alert(`⛔ บัญชี (${user.email}) ไม่มีสิทธิ์เข้าใช้งานระบบ\nกรุณาติดต่อผู้ดูแลระบบเพื่อเพิ่มรายชื่อใน UserMaster`);
+                
+                // สั่ง Sign Out ออกจาก Firebase ทันที
+                await signOut(auth);
+                
+                if (statusEl) statusEl.innerText = "";
+                if (loginSec) loginSec.classList.remove('hidden');
+                if (formSec) formSec.classList.add('hidden');
+                return;
+            }
+
+            // 3. กรณีได้รับอนุญาต (มีชื่อใน UserMaster)
             if (loginSec) loginSec.classList.add('hidden');
             
+            // โหลดโมดูลหน้าฟอร์มและพรีวิว
             await loadComponent('formSection', 'form.html');
             await loadComponent('previewSection', 'preview.html');
             
             if (formSec) formSec.classList.remove('hidden');
             
+            // ใส่ชื่อ-นามสกุลจริงจาก UserMaster (หากไม่มีให้ใช้ displayName ของ Google)
             const requesterInput = document.getElementById('requesterName');
-            if (requesterInput) requesterInput.value = user.displayName || user.email;
+            if (requesterInput) {
+                requesterInput.value = checkResult.fullName || user.displayName || user.email;
+            }
 
+            // โหลดรายการวัสดุและตั้งค่าวันที่ปัจจุบัน
             await fetchMaterialList();
             initDefaultDate();
+            
             if (statusEl) statusEl.innerText = "";
 
         } catch (err) {
             console.error("Error loading user session:", err);
-            if (statusEl) statusEl.innerText = "เกิดข้อผิดพลาดในการโหลดข้อมูล";
+            if (statusEl) statusEl.innerText = "เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์";
         }
     } else {
+        // กรณีผู้ใช้ไม่ได้ล็อกอิน หรือกด Sign Out
         if (loginSec) loginSec.classList.remove('hidden');
         if (formSec) formSec.classList.add('hidden');
+        if (statusEl) statusEl.innerText = "";
     }
 });
 
+// 📌 ฟังก์ชันช่วยโหลดคอมโพเนนต์ HTML
 async function loadComponent(elementId, filePath) {
     try {
         const response = await fetch(filePath);
@@ -100,6 +137,7 @@ async function loadComponent(elementId, filePath) {
     }
 }
 
+// 📌 ฟังก์ชันตั้งค่าวันที่ปัจจุบันแบบ พ.ศ. (YYYY-MM-DD)
 function initDefaultDate() {
     const today = new Date();
     const dd = String(today.getDate()).padStart(2, '0');
