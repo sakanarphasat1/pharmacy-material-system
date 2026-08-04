@@ -155,7 +155,7 @@ function initDefaultDate() {
 }
 
 // ==========================================================
-// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (เชื่อมต่อ Apps Script)
+// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ (เพิ่มระบบ Auto-Reload เมื่อ Error)
 // ==========================================================
 
 async function fetchMaterialList() {
@@ -165,20 +165,38 @@ async function fetchMaterialList() {
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify({ action: "getMaterials" })
         });
+
+        // หาก HTTP Status มีปัญหา (เช่น 404, 500) ให้โยน Error ไปที่ catch
+        if (!response.ok) {
+            throw new Error(`HTTP Error status: ${response.status}`);
+        }
+
         const textData = await response.text();
-        const result = JSON.parse(textData);
-        
-        if (result.success) {
+        let result;
+
+        try {
+            result = JSON.parse(textData);
+        } catch (e) {
+            throw new Error("ข้อมูลที่ได้กลับมาไม่อยู่ในรูปแบบ JSON");
+        }
+
+        // ตรวจสอบว่ามีข้อมูลส่งกลับมาสำเร็จหรือไม่
+        if (result && result.success && Array.isArray(result.data)) {
             globalMaterialList = result.data;
             const selectEl = document.getElementById('itemSelect1') || document.querySelector('.item-name');
             if (selectEl) {
                 updateMaterialDropdown(selectEl);
             }
         } else {
-            console.error("โหลดข้อมูลพัสดุล้มเหลว:", result.message);
+            throw new Error(result ? result.message : "ไม่สามารถอ่านข้อมูลพัสดุได้");
         }
+
     } catch (error) {
-        console.error("Error fetching materials:", error);
+        console.error("❌ Error fetching materials:", error);
+        
+        // 🔄 แจ้งผู้ใช้ และรีเฟรชหน้าเว็บใหม่อัตโนมัติเมื่อเกิด Error
+        alert("⚠️ เกิดข้อผิดพลาดในการดึงข้อมูลพัสดุ ระบบจะทำการรีเฟรชหน้าเว็บใหม่อัตโนมัติครับ");
+        window.location.reload();
     }
 }
 
