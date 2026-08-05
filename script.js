@@ -83,28 +83,27 @@ async function verifyUserPermission(email, retryCount = 1, maxRetries = 3) {
 
         const textData = await response.text();
 
-        // 🛡️ ดักจับกรณี Google Apps Script ส่ง HTML มาแทน JSON (แก้ปัญหา SyntaxError)
+        // ดักจับกรณี Google Apps Script ส่ง HTML มาแทน JSON
         if (textData.trim().startsWith("<")) {
             throw new Error("Google Apps Script ตอบกลับเป็น HTML ชั่วคราว");
         }
 
         const result = JSON.parse(textData);
-        return result; // ส่งผลลัพธ์กลับเมื่อสำเร็จ
+        return result;
 
     } catch (error) {
         console.warn(`⚠️ ตรวจสอบสิทธิ์ล้มเหลว ครั้งที่ ${retryCount}/${maxRetries}:`, error.message);
 
-        // ถ้ายังลองไม่ครบ 3 ครั้ง ให้รอ 1.5 วินาทีแล้วยิงซ้ำ
         if (retryCount < maxRetries) {
             await new Promise(resolve => setTimeout(resolve, 1500));
             return await verifyUserPermission(email, retryCount + 1, maxRetries);
         } else {
-            throw error; // ส่ง Error ต่อไปเมื่อลองครบ 3 ครั้งแล้วยังไม่สำเร็จ
+            throw error;
         }
     }
 }
 
-// 📌 ตัวตรวจจับสถานะการล็อกอิน (พร้อมระบบรองรับ Error)
+// 📌 ตัวตรวจจับสถานะการล็อกอิน
 onAuthStateChanged(auth, async (user) => {
     const loginSec = document.getElementById('loginSection');
     const formSec = document.getElementById('formSection');
@@ -115,21 +114,24 @@ onAuthStateChanged(auth, async (user) => {
             // 1. ตรวจสอบสิทธิ์ผ่านฟังก์ชัน verifyUserPermission
             const checkResult = await verifyUserPermission(user.email);
 
-            // 2. กรณีไม่มีสิทธิ์เข้าใช้งานระบบ
+            // 2. กรณีไม่มีสิทธิ์เข้าใช้งานระบบ (ปรับลำดับการทำงานแก้ปัญหาการวนลูป)
             if (!checkResult || (!checkResult.allowed && !checkResult.isAllowed)) {
-                alert(`⛔ บัญชี (${user.email}) ไม่มีสิทธิ์เข้าใช้งานระบบ\nกรุณาติดต่อผู้ดูแลระบบเพื่อเพิ่มรายชื่อใน UserMaster`);
                 
-                // สั่ง Sign Out ออกจาก Firebase ทันที
+                // 🟢 Step A: สั่ง Sign Out ออกจาก Firebase ในเบราว์เซอร์ทันที
                 await signOut(auth);
                 currentUserFullName = "";
                 
+                // 🟢 Step B: คืนค่า UI หน้าเว็บกลับสู่หน้าล็อกอินพร้อมใช้งาน
                 if (statusEl) statusEl.innerText = "";
                 if (loginSec) loginSec.classList.remove('hidden');
                 if (formSec) formSec.classList.add('hidden');
+
+                // 🟢 Step C: แจ้งเตือนผู้ใช้หลังจาก Sign Out เรียบร้อยแล้ว
+                alert(`⛔ บัญชี (${user.email}) ไม่มีสิทธิ์เข้าใช้งานระบบ\nกรุณาเปลี่ยนไปใช้บัญชีอื่น หรือติดต่อผู้ดูแลระบบเพื่อเพิ่มรายชื่อใน UserMaster`);
                 return;
             }
 
-            // 3. กรณีได้รับอนุญาต (บันทึกชื่อจาก UserMaster)
+            // 3. กรณีได้รับอนุญาต
             currentUserFullName = checkResult.fullName || user.displayName || user.email;
 
             if (loginSec) loginSec.classList.add('hidden');
@@ -154,6 +156,10 @@ onAuthStateChanged(auth, async (user) => {
 
         } catch (err) {
             console.error("Error loading user session:", err);
+            
+            // กรณีเกิด Error ในระบบตรวจสอบ ให้ Sign Out ออกก่อนเพื่อป้องกันการค้าง
+            await signOut(auth);
+            
             if (statusEl) {
                 statusEl.innerHTML = `
                     <div style="margin-top: 10px;">
