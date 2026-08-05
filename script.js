@@ -29,10 +29,15 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// 🟢 บังคับให้ Google แสดงหน้าเลือกบัญชีใหม่เสมอทุกครั้งที่มีการกดล็อกอิน
+provider.setCustomParameters({
+    prompt: 'select_account'
+});
+
 // ตัวแปรส่วนกลาง (Global Variables)
 let rowCount = 1;
 let globalMaterialList = [];
-let currentUserFullName = ""; // 🟢 เพิ่มตัวแปรสำหรับเก็บชื่อจาก UserMaster
+let currentUserFullName = ""; 
 
 // ==========================================================
 // 💥 ส่วนที่ 2: ระบบยืนยันตัวตน (Authentication) & โหลดหน้าเว็บ
@@ -46,6 +51,8 @@ window.loginWithGoogle = async function() {
     if (statusEl) statusEl.innerText = "กำลังเชื่อมต่อ Google...";
 
     try {
+        // ล้าง Session ค้างก่อนหน้าเพื่อความปลอดภัย
+        await signOut(auth);
         await signInWithPopup(auth, provider);
     } catch (error) {
         console.error("Login failed:", error);
@@ -114,19 +121,19 @@ onAuthStateChanged(auth, async (user) => {
             // 1. ตรวจสอบสิทธิ์ผ่านฟังก์ชัน verifyUserPermission
             const checkResult = await verifyUserPermission(user.email);
 
-            // 2. กรณีไม่มีสิทธิ์เข้าใช้งานระบบ (ปรับลำดับการทำงานแก้ปัญหาการวนลูป)
+            // 2. กรณีไม่มีสิทธิ์เข้าใช้งานระบบ
             if (!checkResult || (!checkResult.allowed && !checkResult.isAllowed)) {
                 
-                // 🟢 Step A: สั่ง Sign Out ออกจาก Firebase ในเบราว์เซอร์ทันที
+                // Step A: สั่ง Sign Out ออกจาก Firebase ในเบราว์เซอร์ทันที
                 await signOut(auth);
                 currentUserFullName = "";
                 
-                // 🟢 Step B: คืนค่า UI หน้าเว็บกลับสู่หน้าล็อกอินพร้อมใช้งาน
+                // Step B: คืนค่า UI หน้าเว็บกลับสู่หน้าล็อกอินพร้อมใช้งาน
                 if (statusEl) statusEl.innerText = "";
                 if (loginSec) loginSec.classList.remove('hidden');
                 if (formSec) formSec.classList.add('hidden');
 
-                // 🟢 Step C: แจ้งเตือนผู้ใช้หลังจาก Sign Out เรียบร้อยแล้ว
+                // Step C: แจ้งเตือนผู้ใช้หลังจาก Sign Out เรียบร้อยแล้ว
                 alert(`⛔ บัญชี (${user.email}) ไม่มีสิทธิ์เข้าใช้งานระบบ\nกรุณาเปลี่ยนไปใช้บัญชีอื่น หรือติดต่อผู้ดูแลระบบเพื่อเพิ่มรายชื่อใน UserMaster`);
                 return;
             }
@@ -210,7 +217,6 @@ function initDefaultDate() {
 // ==========================================================
 
 async function fetchMaterialList(retryCount = 1, maxRetries = 3) {
-    // 1. กำหนดข้อความแจ้งสถานะใน Dropdown ตามจำนวนรอบที่กำลังพยายาม
     if (retryCount === 1) {
         setDropdownsStatus("-- กำลังโหลดข้อมูลพัสดุ... --");
     } else {
@@ -237,12 +243,11 @@ async function fetchMaterialList(retryCount = 1, maxRetries = 3) {
             throw new Error("ข้อมูลตอบกลับไม่อยู่ในรูปแบบ JSON");
         }
 
-        // กรณีดึงข้อมูลสำเร็จ
         if (result && result.success && Array.isArray(result.data)) {
             globalMaterialList = result.data;
             renderAllDropdowns();
             console.log("✅ โหลดข้อมูลพัสดุสำเร็จ");
-            return; // ออกจากฟังก์ชันทันทีเมื่อสำเร็จ
+            return;
         } else {
             throw new Error(result ? result.message : "ไม่พบข้อมูลพัสดุ");
         }
@@ -250,17 +255,12 @@ async function fetchMaterialList(retryCount = 1, maxRetries = 3) {
     } catch (error) {
         console.warn(`⚠️ ดึงข้อมูลพัสดุล้มเหลว ครั้งที่ ${retryCount}/${maxRetries}:`, error.message);
 
-        // 2. ถ้ายังลองไม่ครบ 3 ครั้ง ให้รอ 2 วินาที แล้วลองยิงใหม่ (Retry)
         if (retryCount < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // หน่วงเวลา 2 วินาที
-            return await fetchMaterialList(retryCount + 1, maxRetries); // เรียกตัวเองซ้ำโดยเพิ่มนับรอบ
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            return await fetchMaterialList(retryCount + 1, maxRetries);
         } 
-        
-        // 3. ถ้าพยายามครบ 3 ครั้งแล้วยังไม่ได้ ให้แจ้งเตือนผู้ใช้โดยไม่ต้องรีเฟรชทั้งหน้า
         else {
             console.error("❌ พยายามเชื่อมต่อครบ 3 ครั้งแล้วไม่สำเร็จ");
-            
-            // หากมี Cache เดิมอยู่ ให้เอาของเดิมมาใช้แก้ขัดก่อน
             if (globalMaterialList && globalMaterialList.length > 0) {
                 renderAllDropdowns();
                 alert("⚠️ ไม่สามารถอัปเดตรายการพัสดุล่าสุดได้ ระบบจะใช้ข้อมูลรายการเดิมชั่วคราวครับ");
@@ -272,7 +272,6 @@ async function fetchMaterialList(retryCount = 1, maxRetries = 3) {
     }
 }
 
-// 📌 ฟังก์ชันช่วยตั้งข้อความสถานะใน Dropdown ทั้งหมด
 function setDropdownsStatus(message) {
     const selectElements = document.querySelectorAll('.item-name');
     selectElements.forEach(select => {
@@ -280,7 +279,6 @@ function setDropdownsStatus(message) {
     });
 }
 
-// 📌 ฟังก์ชันวาดรายการ Dropdown จาก globalMaterialList
 function renderAllDropdowns() {
     const selectElements = document.querySelectorAll('.item-name');
     selectElements.forEach(select => {
@@ -486,7 +484,6 @@ window.handleFormSubmit = async function(actionType) {
         payerName: document.getElementById('payerName')?.value.trim() || '-'
     };
 
-    // 🔹 กรณีที่ 1: กดปุ่ม "ตัวอย่างเอกสาร"
     if (actionType === 'preview') {
         mapDataToA4Preview(formData);
         
@@ -504,8 +501,6 @@ window.handleFormSubmit = async function(actionType) {
         
         if (previewSec) previewSec.scrollIntoView({ behavior: 'smooth' });
     }
-    
-    // 🔹 กรณีที่ 2: กดปุ่ม "บันทึกข้อมูลลงระบบและออกเอกสาร"
     else if (actionType === 'save') {
         const loading = document.getElementById('loadingOverlay');
         if (loading) loading.classList.remove('hidden');
@@ -642,12 +637,10 @@ window.backToForm = async function() {
     }
 };
 
-// 📌 ฟังก์ชัน resetForm ที่ได้รับการแก้ไขแล้ว 🟢
 window.resetForm = function() {
     const form = document.getElementById('materialForm');
     if (form) form.reset();
     
-    // เคลียร์ตารางรายการวัสดุให้เหลือแถวเดียว
     const tbody = document.getElementById('itemsTableBody');
     if (tbody) {
         tbody.innerHTML = `
@@ -672,10 +665,8 @@ window.resetForm = function() {
     const firstSelect = document.getElementById('itemSelect1');
     if (firstSelect) updateMaterialDropdown(firstSelect);
     
-    // ตั้งค่าวันที่ปัจจุบัน
     initDefaultDate();
 
-    // 🟢 ดึงชื่อจากตัวแปร currentUserFullName ที่ได้จาก UserMaster มาใส่แทน
     const requesterInput = document.getElementById('requesterName');
     if (requesterInput && currentUserFullName) {
         requesterInput.value = currentUserFullName;
