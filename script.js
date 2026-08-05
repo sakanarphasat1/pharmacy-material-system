@@ -57,27 +57,63 @@ window.loginWithGoogle = async function() {
     }
 };
 
-// 📌 ตัวตรวจจับสถานะการล็อกอิน (พร้อมระบบกรองสิทธิ์ UserMaster)
+// 📌 ฟังก์ชันช่วยตรวจสอบสิทธิ์ใน UserMaster (พร้อมระบบ Retry อัตโนมัติ 3 ครั้ง)
+async function verifyUserPermission(email, retryCount = 1, maxRetries = 3) {
+    const statusEl = document.getElementById('loginStatus');
+    
+    if (statusEl) {
+        statusEl.innerText = retryCount === 1 
+            ? "กำลังตรวจสอบสิทธิ์ในระบบ..." 
+            : `กำลังพยายามตรวจสอบสิทธิ์อีกครั้ง (${retryCount}/${maxRetries})...`;
+    }
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: "checkUser",
+                email: email
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error status: ${response.status}`);
+        }
+
+        const textData = await response.text();
+
+        // 🛡️ ดักจับกรณี Google Apps Script ส่ง HTML มาแทน JSON (แก้ปัญหา SyntaxError)
+        if (textData.trim().startsWith("<")) {
+            throw new Error("Google Apps Script ตอบกลับเป็น HTML ชั่วคราว");
+        }
+
+        const result = JSON.parse(textData);
+        return result; // ส่งผลลัพธ์กลับเมื่อสำเร็จ
+
+    } catch (error) {
+        console.warn(`⚠️ ตรวจสอบสิทธิ์ล้มเหลว ครั้งที่ ${retryCount}/${maxRetries}:`, error.message);
+
+        // ถ้ายังลองไม่ครบ 3 ครั้ง ให้รอ 1.5 วินาทีแล้วยิงซ้ำ
+        if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            return await verifyUserPermission(email, retryCount + 1, maxRetries);
+        } else {
+            throw error; // ส่ง Error ต่อไปเมื่อลองครบ 3 ครั้งแล้วยังไม่สำเร็จ
+        }
+    }
+}
+
+// 📌 ตัวตรวจจับสถานะการล็อกอิน (พร้อมระบบรองรับ Error)
 onAuthStateChanged(auth, async (user) => {
     const loginSec = document.getElementById('loginSection');
     const formSec = document.getElementById('formSection');
     const statusEl = document.getElementById('loginStatus');
 
     if (user) {
-        if (statusEl) statusEl.innerText = "กำลังตรวจสอบสิทธิ์ในระบบ...";
-
         try {
-            // 1. ยิง API ไปตรวจสอบอีเมลกับแผ่นงาน UserMaster ใน Google Sheets
-            const checkResponse = await fetch(APPS_SCRIPT_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: "checkUser",
-                    email: user.email
-                })
-            });
-
-            const checkResult = await checkResponse.json();
+            // 1. ตรวจสอบสิทธิ์ผ่านฟังก์ชัน verifyUserPermission
+            const checkResult = await verifyUserPermission(user.email);
 
             // 2. กรณีไม่มีสิทธิ์เข้าใช้งานระบบ
             if (!checkResult || (!checkResult.allowed && !checkResult.isAllowed)) {
@@ -118,7 +154,16 @@ onAuthStateChanged(auth, async (user) => {
 
         } catch (err) {
             console.error("Error loading user session:", err);
-            if (statusEl) statusEl.innerText = "เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์";
+            if (statusEl) {
+                statusEl.innerHTML = `
+                    <div style="margin-top: 10px;">
+                        <span style="color: #e74c3c; font-weight: bold;">เกิดข้อผิดพลาดในการตรวจสอบสิทธิ์</span><br>
+                        <button type="button" onclick="location.reload()" style="margin-top: 8px; padding: 6px 14px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🔄 กดเพื่อลองใหม่อีกครั้ง
+                        </button>
+                    </div>
+                `;
+            }
         }
     } else {
         // กรณีผู้ใช้ไม่ได้ล็อกอิน หรือกด Sign Out
