@@ -753,3 +753,70 @@ window.exportToPDF = async function() {
         if (loading) loading.classList.add('hidden');
     }
 };
+// 📌 ฟังก์ชันดึงประวัติการเบิกย้อนหลังของผู้ใช้ปัจจุบัน
+async function fetchUserHistory() {
+    const userEmail = auth.currentUser ? auth.currentUser.email : '';
+    const historyTbody = document.getElementById('historyTableBody');
+    if (!historyTbody || !userEmail) return;
+
+    historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">กำลังโหลดประวัติ...</td></tr>`;
+
+    try {
+        const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: "getUserHistory",
+                email: userEmail
+            })
+        });
+
+        const result = await response.json();
+        
+        if (result.success && result.data.length > 0) {
+            historyTbody.innerHTML = "";
+            result.data.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="text-align:center;">${item.docDate}</td>
+                    <td>${item.organization}</td>
+                    <td>${item.itemsSummary}</td>
+                    <td style="text-align:center;">
+                        <button type="button" onclick='reprintFromHistory(${JSON.stringify(item.formDataRaw)})' 
+                                style="padding: 4px 8px; background-color: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            📄 ดู/พิมพ์ PDF
+                        </button>
+                    </td>
+                `;
+                historyTbody.appendChild(tr);
+            });
+        } else {
+            historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">ไม่พบประวัติการเบิกพัสดุย้อนหลัง</td></tr>`;
+        }
+
+    } catch (error) {
+        console.error("Error fetching history:", error);
+        historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">ไม่สามารถโหลดประวัติได้</td></tr>`;
+    }
+}
+
+// 📌 ฟังก์ชันดึงข้อมูลเก่ามาแสดงหน้า Preview เพื่อให้ พิมพ์/ดาวน์โหลด PDF ใหม่ได้ทันที
+window.reprintFromHistory = function(formDataRaw) {
+    const formData = typeof formDataRaw === 'string' ? JSON.parse(formDataRaw) : formDataRaw;
+    
+    // โหลดข้อมูลใส่หน้า Preview แล้วเปิดหน้า Preview
+    mapDataToA4Preview(formData);
+    
+    const formSec = document.getElementById('formSection');
+    const previewSec = document.getElementById('previewSection');
+    const postSaveActions = document.getElementById('postSaveActions');
+
+    if (formSec) formSec.classList.add('hidden');
+    if (previewSec) previewSec.classList.remove('hidden');
+    if (postSaveActions) {
+        postSaveActions.style.display = 'flex';
+        postSaveActions.classList.remove('hidden');
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
