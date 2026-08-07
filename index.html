@@ -9,28 +9,33 @@
     <!-- นำเข้าไฟล์ สไตล์ CSS -->
     <link rel="stylesheet" href="style.css">
     <!-- นำเข้า html2pdf.js สำหรับแปลงหน้า HTML เป็น PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
-  <!-- 📌 แถบเมนูหลักด้านบน (Navbar) -->
-<div class="navbar no-print" style="width: 100%; background-color: #ffffff; border-bottom: 3px solid #f1c40f; padding: 12px 0;">
-    <!-- Container ข้างในทำหน้าที่บีบความกว้างให้ตรงกับแนวขอบของฟอร์ม -->
-    <div class="navbar-container">
-        
-        <!-- 🔹 วงสีน้ำเงิน: ย้ายมาอยู่มุมซ้ายของกรอบฟอร์ม -->
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.5rem;">💊</span>
-            <strong style="font-size: 1.1rem; color: #2c3e50;">Pharmacy Material System</strong>
-        </div>
-        
-        <!-- 🔹 วงสีเขียว: ย้ายไปอยู่มุมขวาของกรอบฟอร์ม -->
-        <div style="font-size: 0.9rem; color: #7f8c8d; font-weight: 500;">
-            RxBUU . Firebase Edition
-        </div>
+    <!-- 📌 แถบเมนูหลักด้านบน (Navbar) -->
+    <div class="navbar no-print" style="width: 100%; background-color: #ffffff; border-bottom: 3px solid #f1c40f; padding: 12px 0;">
+        <div class="navbar-container" style="display: flex; justify-content: space-between; align-items: center; max-width: 1100px; margin: 0 auto; padding: 0 20px;">
+            
+            <!-- 🔹 โลโก้และชื่อระบบ (มุมซ้าย) -->
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 1.5rem;">💊</span>
+                <strong style="font-size: 1.1rem; color: #2c3e50;">Pharmacy Material System</strong>
+            </div>
+            
+            <!-- 🔹 ส่วนขวา: ปุ่มประวัติย้อนหลัง & ชื่อระบบ -->
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <!-- ปุ่มเรียกดูประวัติย้อนหลัง -->
+                <button type="button" id="btnNavHistory" class="btn-history-nav" onclick="openHistoryModal()" style="display: none; padding: 6px 14px; background-color: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8; border-radius: 20px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: 0.2s;">
+                    📜 ประวัติการเบิก
+                </button>
+                <div style="font-size: 0.9rem; color: #7f8c8d; font-weight: 500;">
+                    RxBUU . Firebase Edition
+                </div>
+            </div>
 
+        </div>
     </div>
-</div>
 
     <!-- 📌 กล่องควบคุมเนื้อหาหลัก (App Container) -->
     <div class="app-container">
@@ -60,26 +65,57 @@
 
     </div>
 
-    <!-- ⏳ หน้าต่างแสดงการกำลังส่งข้อมูล (Loading Overlay) -->
+    <!-- =======================================================
+         📌 POPUPS & MODALS SECTION
+         ======================================================= -->
+
+    <!-- ⏳ 1. หน้าต่างแสดงการกำลังส่งข้อมูล (Loading Overlay) -->
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="spinner"></div>
         <div style="margin-top: 15px; font-weight: 500; color: #2c3e50;">กำลังบันทึกข้อมูล กรุณารอสักครู่...</div>
     </div>
 
-    <!-- ✨ หน้าต่างแจ้งเตือนบันทึกสำเร็จ (Popup รูปที่ 2) -->
-<div id="successPopup" class="popup-hidden hidden">
-    <div class="popup-card" style="text-align: center; padding: 30px; background: white; border-radius: 16px; max-width: 380px; margin: auto;">
-        <div style="font-size: 2rem; margin-bottom: 10px;">✨</div>
-        <h3 style="margin-bottom: 20px; color: #2c3e50; font-size: 1.3rem;">บันทึกข้อมูลเรียบร้อย!</h3>
-        
-        <button type="button" class="btn-primary" onclick="closePopupAndGoToPrint()" 
-                style="width: 100%; padding: 12px; background-color: #d4edda; color: #155724; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s;">
-            เปิดหน้าพรีวิวเพื่อสั่งพิมพ์
-        </button>
+    <!-- ✨ 2. หน้าต่างแจ้งเตือนบันทึกสำเร็จ -->
+    <div id="successPopup" class="popup-hidden hidden">
+        <div class="popup-card" style="text-align: center; padding: 30px; background: white; border-radius: 16px; max-width: 380px; margin: auto;">
+            <div style="font-size: 2rem; margin-bottom: 10px;">✨</div>
+            <h3 style="margin-bottom: 20px; color: #2c3e50; font-size: 1.3rem;">บันทึกข้อมูลเรียบร้อย!</h3>
+            
+            <button type="button" class="btn-primary" onclick="closePopupAndGoToPrint()" 
+                    style="width: 100%; padding: 12px; background-color: #d4edda; color: #155724; border: none; border-radius: 8px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s;">
+                เปิดหน้าพรีวิวเพื่อสั่งพิมพ์
+            </button>
+        </div>
     </div>
-</div>
 
-    <!-- 📁 หน้าต่าง Drive Modal สำหรับดูรูปภาพรายการพัสดุ -->
+    <!-- 📜 3. หน้าต่าง Modal ประวัติการทำรายการย้อนหลัง -->
+    <div id="historyModal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 style="margin: 0; font-weight: 500;">📜 ประวัติการทำรายการย้อนหลัง</h3>
+                <button type="button" class="modal-close-btn" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">ลำดับ</th>
+                            <th style="width: 30%;">วันที่ในเอกสาร</th>
+                            <th style="width: 35%;">เวลาที่บันทึก</th>
+                            <th style="width: 20%;">จำนวนรายการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #777;">กำลังโหลดข้อมูล...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 📁 4. หน้าต่าง Drive Modal สำหรับดูรูปภาพรายการพัสดุ -->
     <div id="driveModal" class="no-print" style="display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
         <div style="background: white; width: 85%; height: 85%; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.3);">
             <div style="padding: 12px 20px; background: #2c3e50; color: white; display: flex; justify-content: space-between; align-items: center;">
