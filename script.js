@@ -21,7 +21,7 @@ const firebaseConfig = {
   measurementId: "G-EE28Y1L35G"
 };
 
-// 🔗 1.2 Web App URL จาก Google Apps Script
+// 🔗 1.2 Web App URL จาก Google Apps Script (ใช้ตัวแปรนี้จุดเดียวทั้งไฟล์)
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZM3AcOzuf4mHC8oeIhpBj8MDUvvf-PChhXuAUOMagiBoYL_rmu-CgD6wID10NZwoi/exec";
 
 // Initialize Firebase
@@ -121,6 +121,7 @@ onAuthStateChanged(auth, async (user) => {
             if (!checkResult || (!checkResult.allowed && !checkResult.isAllowed)) {
                 await signOut(auth);
                 currentUserFullName = "";
+                localStorage.removeItem("userEmail"); // ลบอีเมลเมื่อไม่มีสิทธิ์
                 
                 if (statusEl) statusEl.innerText = "";
                 if (loginSec) loginSec.classList.remove('hidden');
@@ -129,6 +130,9 @@ onAuthStateChanged(auth, async (user) => {
                 alert(`⛔ บัญชี (${user.email}) ไม่มีสิทธิ์เข้าใช้งานระบบ\nกรุณาเปลี่ยนไปใช้บัญชีอื่น หรือติดต่อผู้ดูแลระบบเพื่อเพิ่มรายชื่อใน UserMaster`);
                 return;
             }
+
+            // 💾 บันทึกอีเมลลง localStorage สำหรับใช้งานทั่วระบบ
+            localStorage.setItem("userEmail", user.email);
 
             currentUserFullName = checkResult.fullName || user.displayName || user.email;
 
@@ -147,14 +151,12 @@ onAuthStateChanged(auth, async (user) => {
             await fetchMaterialList();
             initDefaultDate();
             
-            // 🟢 ดึงประวัติการเบิกย้อนหลังมาแสดงทันทีเมื่อล็อกอิน
-            await fetchUserHistory();
-            
             if (statusEl) statusEl.innerText = "";
 
         } catch (err) {
             console.error("Error loading user session:", err);
             await signOut(auth);
+            localStorage.removeItem("userEmail");
             
             if (statusEl) {
                 statusEl.innerHTML = `
@@ -169,6 +171,7 @@ onAuthStateChanged(auth, async (user) => {
         }
     } else {
         currentUserFullName = "";
+        localStorage.removeItem("userEmail");
         if (loginSec) loginSec.classList.remove('hidden');
         if (formSec) formSec.classList.add('hidden');
         if (statusEl) statusEl.innerText = "";
@@ -201,7 +204,7 @@ function initDefaultDate() {
 }
 
 // ==========================================================
-// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ & ประวัติการเบิกย้อนหลัง
+// 💥 ส่วนที่ 3: จัดการข้อมูลรายการพัสดุ
 // ==========================================================
 
 async function fetchMaterialList(retryCount = 1, maxRetries = 3) {
@@ -355,60 +358,7 @@ window.checkQuantityLimit = function(inputEl) {
     }
 };
 
-// 🟢 3.1 ฟังก์ชันดึงประวัติการเบิกย้อนหลังเฉพาะของตนเอง (เพิ่มใหม่)
-async function fetchUserHistory() {
-    const userEmail = auth.currentUser ? auth.currentUser.email : '';
-    const historyTbody = document.getElementById('historyTableBody');
-    if (!historyTbody || !userEmail) return;
-
-    historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">กำลังโหลดประวัติ...</td></tr>`;
-
-    try {
-        const response = await fetch(APPS_SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: "getUserHistory",
-                email: userEmail
-            })
-        });
-
-        const textData = await response.text();
-        const result = JSON.parse(textData);
-        
-        if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-            historyTbody.innerHTML = "";
-            result.data.forEach((item) => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="text-align:center;">${item.saveTime}</td>
-                    <td style="text-align:center;">${item.docDate}</td>
-                    <td style="text-align:center;">${item.itemCount} รายการ</td>
-                    <td style="text-align:center;">
-                        <button type="button" class="btn-history-print" 
-                                style="padding: 4px 10px; background-color: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            📄 ดู/พิมพ์ PDF
-                        </button>
-                    </td>
-                `;
-                
-                // ผูก Event ปุ่มกดพิมพ์ย้อนหลัง
-                const printBtn = tr.querySelector('.btn-history-print');
-                printBtn.onclick = () => reprintFromHistory(item.rawJson);
-
-                historyTbody.appendChild(tr);
-            });
-        } else {
-            historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">ไม่พบประวัติการเบิกพัสดุย้อนหลัง</td></tr>`;
-        }
-
-    } catch (error) {
-        console.error("Error fetching user history:", error);
-        historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">ไม่สามารถโหลดประวัติย้อนหลังได้</td></tr>`;
-    }
-}
-
-// 🟢 3.2 ฟังก์ชันดึง Raw Data JSON ย้อนหลังมาโหลดใส่หน้า Preview (เพิ่มใหม่)
+// 🟢 3.1 ฟังก์ชันดึง Raw Data JSON ย้อนหลังมาโหลดใส่หน้า Preview
 window.reprintFromHistory = function(rawJson) {
     try {
         if (!rawJson) {
@@ -420,6 +370,9 @@ window.reprintFromHistory = function(rawJson) {
         
         // แมปข้อมูลลง A4 Preview
         mapDataToA4Preview(formData);
+
+        // ปิด Modal ประวัติ
+        closeHistoryModal();
         
         const formSec = document.getElementById('formSection');
         const previewSec = document.getElementById('previewSection');
@@ -581,8 +534,8 @@ window.handleFormSubmit = async function(actionType) {
         const loading = document.getElementById('loadingOverlay');
         if (loading) loading.classList.remove('hidden');
 
-        // ดึง Email ของผู้ใช้งานปัจจุบันที่ล็อกอินผ่าน Firebase
-        const currentUserEmail = auth.currentUser ? auth.currentUser.email : '';
+        // ดึง Email ของผู้ใช้งานปัจจุบัน
+        const currentUserEmail = auth.currentUser ? auth.currentUser.email : (localStorage.getItem("userEmail") || '');
 
         try {
             const response = await fetch(APPS_SCRIPT_URL, {
@@ -591,7 +544,7 @@ window.handleFormSubmit = async function(actionType) {
                 body: JSON.stringify({ 
                     action: "saveData", 
                     formData: formData,
-                    userEmail: currentUserEmail // 🟢 แนบ Email ผู้เบิกส่งไปยัง Apps Script
+                    userEmail: currentUserEmail 
                 })
             });
 
@@ -605,7 +558,6 @@ window.handleFormSubmit = async function(actionType) {
 
             mapDataToA4Preview(formData);
             await fetchMaterialList(); 
-            await fetchUserHistory(); // 🟢 อัปเดตตารางประวัติย้อนหลังทันที
             
             showSuccessPopup();
 
@@ -720,9 +672,6 @@ window.backToForm = async function() {
     if (typeof fetchMaterialList === 'function') {
         await fetchMaterialList();
     }
-    
-    // 🟢 อัปเดตประวัติย้อนหลังเมื่อกลับมาหน้าฟอร์ม
-    await fetchUserHistory();
 };
 
 window.resetForm = function() {
@@ -841,6 +790,7 @@ window.exportToPDF = async function() {
         if (loading) loading.classList.add('hidden');
     }
 };
+
 // =======================================================
 // 📜 ส่วนการทำงานของ Modal ประวัติการเบิกย้อนหลัง (History Modal)
 // =======================================================
@@ -848,8 +798,6 @@ window.exportToPDF = async function() {
 /**
  * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง
  */
-// 🌐 URL ของ Google Apps Script Web App (แทนที่ด้วยลิงก์จริงของคุณ)
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZM3AcOzuf4mHC8oeIhpBj8MDUvvf-PChhXuAUOMagiBoYL_rmu-CgD6wID10NZwoi/exec";
 export async function openHistoryModal() {
   const modal = document.getElementById("historyModal");
   const tableBody = document.getElementById("historyTableBody");
@@ -860,41 +808,59 @@ export async function openHistoryModal() {
   modal.classList.remove("hidden");
   tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">⌛ กำลังโหลดข้อมูลประวัติ...</td></tr>`;
 
-  // 2. ดึงอีเมลผู้ใช้งานปัจจุบันที่เข้าสู่ระบบจาก localStorage
-  const currentUserEmail = localStorage.getItem("userEmail") || ""; 
+  // 2. ดึงอีเมลผู้ใช้งานปัจจุบัน (ดึงจาก Firebase Auth หรือ localStorage)
+  const currentUserEmail = auth.currentUser ? auth.currentUser.email : (localStorage.getItem("userEmail") || ""); 
+
+  if (!currentUserEmail) {
+    tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#e67e22;">⚠️ กรุณาล็อกอินเข้าสู่ระบบก่อนดึงประวัติการเบิก</td></tr>`;
+    return;
+  }
 
   try {
-    // 3. ส่งคำขอแบบ POST ไปยัง Google Apps Script (SCRIPT_URL)
-    const response = await fetch(SCRIPT_URL, {
+    // 3. ส่งคำขอแบบ POST ไปยัง Google Apps Script (APPS_SCRIPT_URL)
+    const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         action: "getUserHistory",
         email: currentUserEmail
       })
     });
 
-    const result = await response.json();
+    const textData = await response.text();
+    const result = JSON.parse(textData);
 
-    // 4. แสดงผลข้อมูลลงตารางเมื่อได้รับตอบกลับสำเร็จ
+    // 4. แสดงผลข้อมูลลงตารางพร้อมปุ่มดู/พิมพ์เอกสารย้อนหลัง
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-      let rowsHtml = "";
+      tableBody.innerHTML = "";
       result.data.forEach((item, index) => {
-        rowsHtml += `
-          <tr>
-            <td>${index + 1}</td>
-            <td>${item.docDate || "-"}</td>
-            <td>${item.saveTime || "-"}</td>
-            <td>${item.itemCount || 0} รายการ</td>
-          </tr>
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align:center;">${index + 1}</td>
+          <td style="text-align:center;">${item.docDate || "-"}</td>
+          <td style="text-align:center;">${item.saveTime || "-"}</td>
+          <td style="text-align:center;">
+            <button type="button" class="btn-history-print" 
+                    style="padding: 5px 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: 0.2s;">
+              📄 ดู/พิมพ์ (${item.itemCount || 0} รายการ)
+            </button>
+          </td>
         `;
+        
+        // ผูก Event ปุ่มกดพิมพ์ย้อนหลัง
+        const printBtn = tr.querySelector('.btn-history-print');
+        if (printBtn) {
+          printBtn.onclick = () => reprintFromHistory(item.rawJson);
+        }
+
+        tableBody.appendChild(tr);
       });
-      tableBody.innerHTML = rowsHtml;
     } else {
-      tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">ไม่พบประวัติการบันทึกย้อนหลัง</td></tr>`;
+      tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">ไม่พบประวัติการบันทึกย้อนหลังของบัญชีนี้ (${currentUserEmail})</td></tr>`;
     }
   } catch (error) {
     console.error("Error fetching history:", error);
-    tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`;
+    tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">เกิดข้อผิดพลาดในการโหลดข้อมูลประวัติ</td></tr>`;
   }
 }
 
