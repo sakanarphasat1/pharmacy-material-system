@@ -841,3 +841,55 @@ window.exportToPDF = async function() {
         if (loading) loading.classList.add('hidden');
     }
 };
+/**
+ * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง
+ */
+async function openHistoryModal() {
+  const modal = document.getElementById("historyModal");
+  const tableBody = document.getElementById("historyTableBody");
+  
+  modal.classList.remove("hidden");
+  tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">⌛ กำลังโหลดข้อมูลประวัติ...</td></tr>`;
+
+  // ดึงอีเมลผู้ใช้งานปัจจุบันที่เข้าสู่ระบบ
+  const currentUserEmail = localStorage.getItem("userEmail") || ""; 
+
+  try {
+    const response = await fetch(SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "getUserHistory",
+        email: currentUserEmail
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success && Array.isArray(result.data) && result.data.length > 0) {
+      let rowsHtml = "";
+      result.data.forEach((item, index) => {
+        rowsHtml += `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.docDate}</td>
+            <td>${item.saveTime}</td>
+            <td>${item.itemCount} รายการ</td>
+          </tr>
+        `;
+      });
+      tableBody.innerHTML = rowsHtml;
+    } else {
+      tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">ไม่พบประวัติการบันทึกย้อนหลัง</td></tr>`;
+    }
+  } catch (error) {
+    console.error("Error fetching history:", error);
+    tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red;">เกิดข้อผิดพลาดในการโหลดข้อมูล</td></tr>`;
+  }
+}
+
+/**
+ * ❌ ปิด Modal ประวัติ
+ */
+function closeHistoryModal() {
+  document.getElementById("historyModal").classList.add("hidden");
+}
