@@ -795,6 +795,10 @@ window.exportToPDF = async function() {
 // 📜 ส่วนการทำงานของ Modal ประวัติการเบิกย้อนหลัง (History Modal)
 // =======================================================
 
+// =======================================================
+// 📜 ส่วนการทำงานของ Modal ประวัติการเบิกย้อนหลัง (History Modal)
+// =======================================================
+
 /**
  * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง
  */
@@ -808,7 +812,7 @@ export async function openHistoryModal() {
   modal.classList.remove("hidden");
   tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">⌛ กำลังโหลดข้อมูลประวัติ...</td></tr>`;
 
-  // 2. ดึงอีเมลผู้ใช้งานปัจจุบัน (ดึงจาก Firebase Auth หรือ localStorage)
+  // 2. ดึงอีเมลผู้ใช้งานปัจจุบัน
   const currentUserEmail = auth.currentUser ? auth.currentUser.email : (localStorage.getItem("userEmail") || ""); 
 
   if (!currentUserEmail) {
@@ -817,7 +821,7 @@ export async function openHistoryModal() {
   }
 
   try {
-    // 3. ส่งคำขอแบบ POST ไปยัง Google Apps Script (APPS_SCRIPT_URL)
+    // 3. ส่งคำขอแบบ POST ไปยัง Google Apps Script
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -847,10 +851,25 @@ export async function openHistoryModal() {
           </td>
         `;
         
-        // ผูก Event ปุ่มกดพิมพ์ย้อนหลัง
+        // ผูก Event ปุ่มกดพิมพ์ย้อนหลังอย่างปลอดภัย
         const printBtn = tr.querySelector('.btn-history-print');
         if (printBtn) {
-          printBtn.onclick = () => reprintFromHistory(item.rawJson);
+          printBtn.onclick = () => {
+            // ตรวจสอบว่าส่ง rawJson มาในรูปแบบไหน (String หรือ Object)
+            let jsonData = item.rawJson;
+            
+            if (!jsonData && item.formData) {
+              jsonData = item.formData;
+            }
+
+            if (!jsonData) {
+              console.error("Data missing for item:", item);
+              alert("ไม่พบข้อมูลเอกสารย้อนหลังฉบับนี้ครับ กรุณาตรวจสอบการบันทึกข้อมูลใน Google Sheets");
+              return;
+            }
+
+            reprintFromHistory(jsonData);
+          };
         }
 
         tableBody.appendChild(tr);
