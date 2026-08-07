@@ -848,6 +848,8 @@ window.exportToPDF = async function() {
 /**
  * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง
  */
+// 🌐 URL ของ Google Apps Script Web App (แทนที่ด้วยลิงก์จริงของคุณ)
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZM3AcOzuf4mHC8oeIhpBj8MDUvvf-PChhXuAUOMagiBoYL_rmu-CgD6wID10NZwoi/exec";
 export async function openHistoryModal() {
   const modal = document.getElementById("historyModal");
   const tableBody = document.getElementById("historyTableBody");
