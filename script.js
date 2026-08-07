@@ -841,20 +841,28 @@ window.exportToPDF = async function() {
         if (loading) loading.classList.add('hidden');
     }
 };
+// =======================================================
+// 📜 ส่วนการทำงานของ Modal ประวัติการเบิกย้อนหลัง (History Modal)
+// =======================================================
+
 /**
  * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง
  */
-async function openHistoryModal() {
+export async function openHistoryModal() {
   const modal = document.getElementById("historyModal");
   const tableBody = document.getElementById("historyTableBody");
   
+  if (!modal || !tableBody) return;
+
+  // 1. เปิดแสดง Modal และขึ้นสถานะกำลังโหลด
   modal.classList.remove("hidden");
   tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">⌛ กำลังโหลดข้อมูลประวัติ...</td></tr>`;
 
-  // ดึงอีเมลผู้ใช้งานปัจจุบันที่เข้าสู่ระบบ
+  // 2. ดึงอีเมลผู้ใช้งานปัจจุบันที่เข้าสู่ระบบจาก localStorage
   const currentUserEmail = localStorage.getItem("userEmail") || ""; 
 
   try {
+    // 3. ส่งคำขอแบบ POST ไปยัง Google Apps Script (SCRIPT_URL)
     const response = await fetch(SCRIPT_URL, {
       method: "POST",
       body: JSON.stringify({
@@ -865,15 +873,16 @@ async function openHistoryModal() {
 
     const result = await response.json();
 
+    // 4. แสดงผลข้อมูลลงตารางเมื่อได้รับตอบกลับสำเร็จ
     if (result.success && Array.isArray(result.data) && result.data.length > 0) {
       let rowsHtml = "";
       result.data.forEach((item, index) => {
         rowsHtml += `
           <tr>
             <td>${index + 1}</td>
-            <td>${item.docDate}</td>
-            <td>${item.saveTime}</td>
-            <td>${item.itemCount} รายการ</td>
+            <td>${item.docDate || "-"}</td>
+            <td>${item.saveTime || "-"}</td>
+            <td>${item.itemCount || 0} รายการ</td>
           </tr>
         `;
       });
@@ -890,6 +899,13 @@ async function openHistoryModal() {
 /**
  * ❌ ปิด Modal ประวัติ
  */
-function closeHistoryModal() {
-  document.getElementById("historyModal").classList.add("hidden");
+export function closeHistoryModal() {
+  const modal = document.getElementById("historyModal");
+  if (modal) {
+    modal.classList.add("hidden");
+  }
 }
+
+// 🔗 ผูกฟังก์ชันเข้ากับ Global Window Object เพื่อให้ onclick บน HTML เรียกใช้งานได้ในระบบ ES Module
+window.openHistoryModal = openHistoryModal;
+window.closeHistoryModal = closeHistoryModal;
