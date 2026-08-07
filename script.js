@@ -358,15 +358,44 @@ window.checkQuantityLimit = function(inputEl) {
     }
 };
 
-// 🟢 3.1 ฟังก์ชันดึง Raw Data JSON ย้อนหลังมาโหลดใส่หน้า Preview
-window.reprintFromHistory = function(rawJson) {
+// 🟢 3.1 ฟังก์ชันดึง Raw Data JSON ย้อนหลังมาโหลดใส่หน้า Preview (ปรับปรุงการ Normalize ข้อมูล)
+export function reprintFromHistory(rawJson) {
     try {
         if (!rawJson) {
             alert("ไม่พบข้อมูลเอกสารย้อนหลังฉบับนี้ครับ");
             return;
         }
 
-        const formData = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+        let formData = typeof rawJson === 'string' ? JSON.parse(rawJson) : rawJson;
+
+        // 🛡️ ปรับโครงสร้างข้อมูล items ให้ตรงเป๊ะ ไม่ว่าข้อมูลเดิมจะเก็บแบบ Object หรือ Array
+        if (formData && Array.isArray(formData.items)) {
+            formData.items = formData.items.map((item, idx) => {
+                if (typeof item === 'object' && !Array.isArray(item)) {
+                    return {
+                        index: item.index || (idx + 1),
+                        name: item.name || item.itemName || "-",
+                        qty: item.qty || item.quantity || "1",
+                        unit: item.unit || item.unitName || "-",
+                        code: item.code || item.itemCode || "-",
+                        reqNo: item.reqNo || "800000...............",
+                        payNo: item.payNo || "490000..............."
+                    };
+                } else if (Array.isArray(item)) {
+                    // หาก Google Sheets ส่งกลับมาเป็นตารางอาเรย์ [index, name, qty, unit, code, reqNo, payNo]
+                    return {
+                        index: item[0] || (idx + 1),
+                        name: item[1] || "-",
+                        qty: item[2] || "1",
+                        unit: item[3] || "-",
+                        code: item[4] || "-",
+                        reqNo: item[5] || "800000...............",
+                        payNo: item[6] || "490000..............."
+                    };
+                }
+                return item;
+            });
+        }
         
         // แมปข้อมูลลง A4 Preview
         mapDataToA4Preview(formData);
@@ -394,7 +423,8 @@ window.reprintFromHistory = function(rawJson) {
         console.error("Reprint Error:", err);
         alert("เกิดข้อผิดพลาดในการโหลดเอกสารย้อนหลัง: " + err.message);
     }
-};
+}
+window.reprintFromHistory = reprintFromHistory;
 
 // ==========================================================
 // 💥 ส่วนที่ 4: การเพิ่ม/ลบ แถวในตาราง
@@ -506,7 +536,7 @@ window.handleFormSubmit = async function(actionType) {
         docDate: formattedBEData, 
         moneySource: document.getElementById('moneySource')?.value.trim() || '-',
         items: items, 
-        requesterName: document.getElementById('requesterName')?.value.trim() || '-',
+        requesterName: document.getElementById('requesterName')?.value.trim() || currentUserFullName || '-',
         supplyHeadName: document.getElementById('supplyHeadName')?.value.trim() || '-',
         approverName: "..........................................................",
         accountantName: document.getElementById('accountantName')?.value.trim() || '-',
@@ -576,6 +606,8 @@ window.handleFormSubmit = async function(actionType) {
 // ==========================================================
 
 function mapDataToA4Preview(data) {
+    if (!data) return;
+
     const moneySourceEl = document.getElementById('viewMoneySource');
     if (moneySourceEl) {
         moneySourceEl.innerText = data.moneySource || "-";
@@ -594,30 +626,33 @@ function mapDataToA4Preview(data) {
         docDateEl.parentElement.style.borderBottom = (data.docDate && data.docDate !== "-") ? "none" : "1px dotted #000";
     }
     
-    if (document.getElementById('viewRequesterName')) document.getElementById('viewRequesterName').innerText = data.requesterName;
-    if (document.getElementById('viewSupplyHeadName')) document.getElementById('viewSupplyHeadName').innerText = data.supplyHeadName;
-    if (document.getElementById('viewApproverName')) document.getElementById('viewApproverName').innerText = data.approverName;
-    if (document.getElementById('viewAccountantName')) document.getElementById('viewAccountantName').innerText = data.accountantName;
-    if (document.getElementById('viewPayerName')) document.getElementById('viewPayerName').innerText = data.payerName;
+    if (document.getElementById('viewRequesterName')) document.getElementById('viewRequesterName').innerText = data.requesterName || "-";
+    if (document.getElementById('viewSupplyHeadName')) document.getElementById('viewSupplyHeadName').innerText = data.supplyHeadName || "-";
+    if (document.getElementById('viewApproverName')) document.getElementById('viewApproverName').innerText = data.approverName || "..........................................................";
+    if (document.getElementById('viewAccountantName')) document.getElementById('viewAccountantName').innerText = data.accountantName || "-";
+    if (document.getElementById('viewPayerName')) document.getElementById('viewPayerName').innerText = data.payerName || "-";
 
     const tbody = document.getElementById('previewTableBody');
     if (tbody) {
         tbody.innerHTML = "";
-        data.items.forEach((item) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td class="center-text">${item.index}</td>
-                <td>${item.name}</td>
-                <td class="center-text">${item.qty}</td>
-                <td class="center-text">${item.unit}</td>
-                <td class="center-text">${item.code}</td>
-                <td class="center-text">${item.reqNo}</td>
-                <td class="center-text">${item.payNo}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        if (Array.isArray(data.items)) {
+            data.items.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="center-text">${item.index || (index + 1)}</td>
+                    <td>${item.name || "-"}</td>
+                    <td class="center-text">${item.qty || "1"}</td>
+                    <td class="center-text">${item.unit || "-"}</td>
+                    <td class="center-text">${item.code || "-"}</td>
+                    <td class="center-text">${item.reqNo || "800000..............."}</td>
+                    <td class="center-text">${item.payNo || "490000..............."}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
     }
 }
+window.mapDataToA4Preview = mapDataToA4Preview;
 
 function showSuccessPopup() {
     const popup = document.getElementById('successPopup');
@@ -795,10 +830,6 @@ window.exportToPDF = async function() {
 // 📜 ส่วนการทำงานของ Modal ประวัติการเบิกย้อนหลัง (History Modal)
 // =======================================================
 
-// =======================================================
-// 📜 ส่วนการทำงานของ Modal ประวัติการเบิกย้อนหลัง (History Modal)
-// =======================================================
-
 /**
  * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง
  */
@@ -855,12 +886,7 @@ export async function openHistoryModal() {
         const printBtn = tr.querySelector('.btn-history-print');
         if (printBtn) {
           printBtn.onclick = () => {
-            // ตรวจสอบว่าส่ง rawJson มาในรูปแบบไหน (String หรือ Object)
-            let jsonData = item.rawJson;
-            
-            if (!jsonData && item.formData) {
-              jsonData = item.formData;
-            }
+            let jsonData = item.rawJson || item.formData;
 
             if (!jsonData) {
               console.error("Data missing for item:", item);
