@@ -831,7 +831,7 @@ window.exportToPDF = async function() {
 // =======================================================
 
 /**
- * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง
+ * 📜 เปิด Modal และดึงข้อมูลประวัติย้อนหลัง (กรองเฉพาะ User ปัจจุบันเท่านั้น)
  */
 export async function openHistoryModal() {
   const modal = document.getElementById("historyModal");
@@ -843,7 +843,7 @@ export async function openHistoryModal() {
   modal.classList.remove("hidden");
   tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">⌛ กำลังโหลดข้อมูลประวัติ...</td></tr>`;
 
-  // 2. ดึงอีเมลผู้ใช้งานปัจจุบัน
+  // 2. ดึงอีเมลผู้ใช้งานปัจจุบันที่ล็อกอินอยู่
   const currentUserEmail = auth.currentUser ? auth.currentUser.email : (localStorage.getItem("userEmail") || ""); 
 
   if (!currentUserEmail) {
@@ -852,54 +852,65 @@ export async function openHistoryModal() {
   }
 
   try {
-    // 3. ส่งคำขอแบบ POST ไปยัง Google Apps Script
+    // 3. ส่งคำขอแบบ POST ไปยัง Google Apps Script พร้อมส่ง Email ไปกรอง
     const response = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({
         action: "getUserHistory",
-        email: currentUserEmail
+        email: currentUserEmail.trim().toLowerCase() // ส่ง Email เป็นอักษรตัวเล็กทั้งหมด
       })
     });
 
     const textData = await response.text();
     const result = JSON.parse(textData);
 
-    // 4. แสดงผลข้อมูลลงตารางพร้อมปุ่มดู/พิมพ์เอกสารย้อนหลัง
-    if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-      tableBody.innerHTML = "";
-      result.data.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="text-align:center;">${index + 1}</td>
-          <td style="text-align:center;">${item.docDate || "-"}</td>
-          <td style="text-align:center;">${item.saveTime || "-"}</td>
-          <td style="text-align:center;">
-            <button type="button" class="btn-history-print" 
-                    style="padding: 5px 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: 0.2s;">
-              📄 ดู/พิมพ์ (${item.itemCount || 0} รายการ)
-            </button>
-          </td>
-        `;
-        
-        // ผูก Event ปุ่มกดพิมพ์ย้อนหลังอย่างปลอดภัย
-        const printBtn = tr.querySelector('.btn-history-print');
-        if (printBtn) {
-          printBtn.onclick = () => {
-            let jsonData = item.rawJson || item.formData;
-
-            if (!jsonData) {
-              console.error("Data missing for item:", item);
-              alert("ไม่พบข้อมูลเอกสารย้อนหลังฉบับนี้ครับ กรุณาตรวจสอบการบันทึกข้อมูลใน Google Sheets");
-              return;
-            }
-
-            reprintFromHistory(jsonData);
-          };
-        }
-
-        tableBody.appendChild(tr);
+    if (result.success && Array.isArray(result.data)) {
+      // 🛡️ Client-side Double Security Filter: กรองเฉพาะรายการที่ตรงกับ Email ของผู้ใช้ปัจจุบันเท่านั้น
+      const myHistoryList = result.data.filter(item => {
+        const itemEmail = (item.userEmail || item.email || "").trim().toLowerCase();
+        return itemEmail === currentUserEmail.trim().toLowerCase();
       });
+
+      // 4. ตรวจสอบว่ามีรายการย้อนหลังเฉพาะของ User นี้หรือไม่
+      if (myHistoryList.length > 0) {
+        tableBody.innerHTML = "";
+        myHistoryList.forEach((item, index) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="text-align:center;">${index + 1}</td>
+            <td style="text-align:center;">${item.docDate || "-"}</td>
+            <td style="text-align:center;">${item.saveTime || "-"}</td>
+            <td style="text-align:center;">
+              <button type="button" class="btn-history-print" 
+                      style="padding: 5px 12px; background-color: #27ae60; color: white; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 500; cursor: pointer; transition: 0.2s;">
+                📄 ดู/พิมพ์ (${item.itemCount || 0} รายการ)
+              </button>
+            </td>
+          `;
+          
+          // ผูก Event ปุ่มกดพิมพ์ย้อนหลัง
+          const printBtn = tr.querySelector('.btn-history-print');
+          if (printBtn) {
+            printBtn.onclick = () => {
+              let jsonData = item.rawJson || item.formData;
+
+              if (!jsonData) {
+                console.error("Data missing for item:", item);
+                alert("ไม่พบข้อมูลเอกสารย้อนหลังฉบับนี้ครับ กรุณาตรวจสอบการบันทึกข้อมูลใน Google Sheets");
+                return;
+              }
+
+              reprintFromHistory(jsonData);
+            };
+          }
+
+          tableBody.appendChild(tr);
+        });
+      } else {
+        // หากไม่มีรายการของ User นี้
+        tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">ไม่พบประวัติการบันทึกย้อนหลังของบัญชีนี้ (${currentUserEmail})</td></tr>`;
+      }
     } else {
       tableBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">ไม่พบประวัติการบันทึกย้อนหลังของบัญชีนี้ (${currentUserEmail})</td></tr>`;
     }
