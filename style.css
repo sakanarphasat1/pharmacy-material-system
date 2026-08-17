@@ -613,6 +613,20 @@ input:focus, select:focus {
         padding-top: 18px !important; /* ปรับระยะบรรทัดเซ็นชื่อให้กระชับพอดี */
     }
 }
+/* =======================================================
+   PDF EXPORT TEMPORARY STYLES (สไตล์กระชับพื้นที่เฉพาะตอนจับภาพ PDF)
+   ======================================================= */
+#previewSection.pdf-print-fit .a4-materials-table td {
+    padding: 2px 3px !important;
+}
+
+#previewSection.pdf-print-fit .signatures-layout-table {
+    margin-top: 10px !important;
+}
+
+#previewSection.pdf-print-fit .sig-line-row td {
+    padding-top: 14px !important;
+}
 /* ==========================================
    📌 POPUP & MODAL STYLES (จัดให้อยู่กลางจอ)
    ========================================== */
