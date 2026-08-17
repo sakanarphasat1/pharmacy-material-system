@@ -538,11 +538,13 @@ input:focus, select:focus {
 /* =======================================================
    6. PRINT MEDIA STYLES (ปรับปรุงแก้ไขให้พอดี 1 หน้า A4 เสมอ)
    ======================================================= */
+/* =======================================================
+   PRINT MEDIA STYLES (ยึดโครงสร้างเดิม 100% - แก้ตำแหน่งเลขที่ + ดึงลายเซ็นเข้าหน้าแรก)
+   ======================================================= */
 @media print {
-    /* 1. กำหนดระยะขอบกระดาษ A4 */
     @page { 
         size: A4 portrait; 
-        margin: 10mm 12mm 10mm 12mm !important; 
+        margin: 8mm 12mm 8mm 12mm !important; /* ปรับขอบ บน-ล่าง ลงเล็กน้อยเป็น 8mm */
     }
 
     html, body { 
@@ -550,11 +552,10 @@ input:focus, select:focus {
         padding: 0 !important; 
         margin: 0 !important; 
         width: 100% !important;
-        height: 100% !important;
+        height: auto !important;
         overflow: visible !important;
     }
 
-    /* 2. ซ่อนองค์ประกอบที่ไม่ต้องการพิมพ์ */
     .no-print, .view-section, header, footer, nav, .navbar, .form-actions, #postSaveActions { 
         display: none !important; 
     }
@@ -562,106 +563,54 @@ input:focus, select:focus {
     #previewSection { 
         display: block !important; 
         width: 100% !important;
-        height: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
     }
     
-    /* 3. คอนเทนเนอร์หลัก A4 (ตั้งค่า relative สำหรับอิงตำแหน่ง และ flex สำหรับดันลายเซ็น) */
     .a4-page { 
-        position: relative !important; /* 🟢 อิงพิกัดสำหรับ .a4-doc-id */
+        position: relative !important; /* 🟢 ปักหมุดให้ .a4-doc-id อิงตำแหน่งขวาบน */
         width: 100% !important;
-        height: 98vh !important;       /* 🟢 ครอบคลุมความสูงของหน้ากระดาษ */
-        display: flex !important;
-        flex-direction: column !important;
+        min-height: auto !important;
+        max-height: 100% !important;
         border: none !important; 
         box-shadow: none !important; 
         margin: 0 !important; 
-        padding: 0 !important; 
+        padding: 0 !important;
         box-sizing: border-box !important;
-        font-size: 15pt !important;    /* 🟢 เพิ่มขนาดฟอนต์พื้นฐาน */
-        line-height: 1.3 !important;
+        font-size: 14pt !important;
+        line-height: 1.2 !important;
     }
 
-    /* 4. ดึงข้อความ เลขที่... ไปไว้ที่มุมขวาบนสุด */
+    /* 🟢 ดึง เลขที่... ขึ้นไปด้านบนสุด (ขยับ top เข้าหาขอบบน) */
     .a4-doc-id {
-        position: absolute !important; /* 🟢 บังคับให้ลอยไปตำแหน่งขวาบน */
-        top: 0 !important;
-        right: 0 !important;
-        font-size: 15pt !important;
+        position: absolute !important;
+        top: 0mm !important;        /* 🟢 ดึงขึ้นไปขอบบนสุด */
+        right: 0mm !important;      /* ชิดขวา */
+        font-size: 14pt !important;
         margin: 0 !important;
         padding: 0 !important;
-        z-index: 10 !important;
     }
 
-    /* 5. ปรับขนาดฟอนต์และระยะส่วนหัวเอกสาร */
-    .a4-header-center {
-        margin-top: 0 !important;
-        margin-bottom: 10px !important;
-    }
-
-    .buu-logo {
-        width: 65px !important;
-        margin-bottom: 4px !important;
-    }
-
-    .uni-title {
-        font-size: 16pt !important;
-        font-weight: bold !important;
-    }
-
-    .doc-title {
-        font-size: 18pt !important;
-        font-weight: bold !important;
-    }
-
-    .metadata-layout-table {
-        margin-bottom: 10px !important;
-        font-size: 15pt !important;
-    }
-
-    .metadata-layout-table td {
-        padding: 2px 0 !important;
-    }
-
-    /* 6. ตารางพัสดุและตัวอักษรในตาราง */
     .a4-materials-table {
-        margin-top: 5px !important;
-        font-size: 15pt !important;
-        width: 100% !important;
+        margin-top: 6px !important;
+        font-size: 14pt !important;
     }
 
-    .a4-materials-table th {
-        padding: 5px 4px !important;
-        font-size: 15pt !important;
-    }
-
+    .a4-materials-table th, 
     .a4-materials-table td {
-        padding: 4px 4px !important;
+        padding: 3px 4px !important;
     }
 
-    .static-code-row td, 
-    .total-row td {
-        height: 26px !important;
-    }
-
-    /* 7. ตารางลายเซ็นท้ายเอกสาร (ดันลงล่างสุดเสมอ) */
+    /* 🟢 ปรับระยะตารางลายเซ็นดึงกลับขึ้นมาในหน้าแรก */
     .signatures-layout-table {
-        margin-top: auto !important;   /* 🟢 ดันลงไปด้านล่างสุดของหน้ากระดาษ */
-        margin-bottom: 5mm !important;
-        font-size: 15pt !important;
-        width: 100% !important;
+        margin-top: 15px !important; /* 🟢 ลดระยะห่างด้านบนเพื่อดึงลายเซ็นกลับเข้าหน้า 1 */
+        font-size: 14pt !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
 
     .sig-line-row td {
-        padding-top: 25px !important;
-    }
-
-    .sig-name-row td, 
-    .sig-title-row td {
-        padding-top: 2px !important;
+        padding-top: 18px !important; /* ปรับระยะบรรทัดเซ็นชื่อให้กระชับพอดี */
     }
 }
 /* ==========================================
