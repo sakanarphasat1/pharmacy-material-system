@@ -780,7 +780,7 @@ window.closeDriveModal = function() {
 };
 
 // ==========================================================
-// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (ฉบับแก้ไขลายเซ็นหาย)
+// 📄 ฟังก์ชันแปลงเอกสาร A4 เป็น PDF (บังคับ 1 หน้าพอดี)
 // ==========================================================
 
 window.exportToPDF = async function() {
@@ -801,34 +801,32 @@ window.exportToPDF = async function() {
     const dateString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
     const fileName = `ใบเบิกพัสดุ_${dateString}.pdf`;
 
-    // 🟢 1. ใส่ Class กระชับพื้นที่ชั่วคราว เพื่อดึงลายเซ็นไม่ให้ตกขอบ
+    // 🟢 เพิ่ม Class กระชับพื้นที่สำหรับจับภาพเป็น PDF
     element.classList.add('pdf-print-fit');
 
     const opt = {
-        margin:       [4, 4, 4, 4], // เว้นขอบเล็กน้อย 4mm เพื่อป้องกันข้อความชิดขอบกระดาษเกินไป
+        margin:       0, // 🟢 ตั้งขอบ PDF เป็น 0 เพราะคุมด้วย padding ใน CSS แทนแล้ว
         filename:     fileName,
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
             scale: 2,
             useCORS: true,
             logging: false,
-            scrollY: 0,
-            windowHeight: element.scrollHeight // 🟢 อ่านความสูงจริงทั้งหมดโดยไม่ตัดขอบ
+            scrollY: 0
         },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak:    { mode: 'avoid-all' }
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
     try {
-        // รอให้เบราว์เซอร์ปรับแต่ง Style ชั่วคราว 0.3 วินาที
-        await new Promise(resolve => setTimeout(resolve, 300));
+        // รอ 0.25 วินาทีให้สไตล์ CSS ปรับเปลี่ยน
+        await new Promise(resolve => setTimeout(resolve, 250));
         await html2pdf().set(opt).from(element).save();
 
     } catch (err) {
         console.error("PDF Export error:", err);
         alert("เกิดข้อผิดพลาดในการสร้างไฟล์ PDF: " + err.message);
     } finally {
-        // 🟢 2. ถอด Class ชั่วคราวออก คืนค่าการแสดงผลหน้าจอเดิม
+        // 🟢 ถอด Class ออกเมื่อเสร็จสิ้น
         element.classList.remove('pdf-print-fit');
 
         if (postSaveActions) postSaveActions.style.visibility = 'visible';
