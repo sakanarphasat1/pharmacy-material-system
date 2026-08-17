@@ -616,16 +616,92 @@ input:focus, select:focus {
 /* =======================================================
    PDF EXPORT TEMPORARY STYLES (สไตล์กระชับพื้นที่เฉพาะตอนจับภาพ PDF)
    ======================================================= */
+
+/* 1. คุมขนาดคอนเทนเนอร์หลักให้อยู่ใน 1 หน้า A4 พอดี ไม่ให้เกิดหน้า 2 */
+#previewSection.pdf-print-fit {
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    height: auto !important;
+    max-height: 295mm !important;
+    overflow: hidden !important;
+}
+
+#previewSection.pdf-print-fit .a4-page {
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 8mm 12mm 6mm 12mm !important; /* กำหนดระยะขอบกระดาษใน PDF */
+    box-sizing: border-box !important;
+}
+
+/* 2. กระชับส่วนหัวเอกสาร (ลดขนาดโลโก้และระยะห่างบรรทัด) */
+#previewSection.pdf-print-fit .a4-header-center {
+    margin-top: 0 !important;
+    margin-bottom: 4px !important;
+}
+
+#previewSection.pdf-print-fit .buu-logo {
+    width: 52px !important; /* ย่อขนาดโลโก้ลงเล็กน้อยให้สมดุล */
+    height: auto !important;
+    margin-bottom: 2px !important;
+}
+
+#previewSection.pdf-print-fit .uni-title {
+    font-size: 15pt !important;
+    line-height: 1.1 !important;
+    margin-bottom: 0 !important;
+}
+
+#previewSection.pdf-print-fit .doc-title {
+    font-size: 16pt !important;
+    line-height: 1.1 !important;
+}
+
+/* 3. กระชับตารางข้อมูลส่วนหัว (แหล่งเงิน/หน่วยงาน/วันที่) */
+#previewSection.pdf-print-fit .metadata-layout-table {
+    margin-top: 2px !important;
+    margin-bottom: 4px !important;
+}
+
+#previewSection.pdf-print-fit .metadata-layout-table td {
+    padding: 1px 0 !important;
+    line-height: 1.15 !important;
+}
+
+/* 4. กระชับตารางรายการพัสดุ */
+#previewSection.pdf-print-fit .a4-materials-table {
+    margin-top: 4px !important;
+}
+
+#previewSection.pdf-print-fit .a4-materials-table th {
+    padding: 4px 3px !important;
+}
+
 #previewSection.pdf-print-fit .a4-materials-table td {
     padding: 2px 3px !important;
 }
 
+#previewSection.pdf-print-fit .static-code-row td,
+#previewSection.pdf-print-fit .total-row td {
+    height: 24px !important;
+}
+
+/* 5. ดึงตารางลายเซ็นขึ้นด้านบน เพื่อป้องกันการโดนตัดขอบล่าง */
 #previewSection.pdf-print-fit .signatures-layout-table {
     margin-top: 10px !important;
+    margin-bottom: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
 }
 
 #previewSection.pdf-print-fit .sig-line-row td {
     padding-top: 14px !important;
+}
+
+#previewSection.pdf-print-fit .sig-name-row td, 
+#previewSection.pdf-print-fit .sig-title-row td {
+    padding-top: 1px !important;
 }
 /* ==========================================
    📌 POPUP & MODAL STYLES (จัดให้อยู่กลางจอ)
