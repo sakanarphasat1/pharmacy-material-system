@@ -539,10 +539,9 @@ input:focus, select:focus {
    6. PRINT MEDIA STYLES (ปรับปรุงแก้ไขให้พอดี 1 หน้า A4 เสมอ)
    ======================================================= */
 @media print {
-    /* 1. รีเซ็ตพื้นหลังและกำหนดหน้ากระดาษ A4 */
     @page { 
         size: A4 portrait; 
-        margin: 8mm 10mm 8mm 10mm !important; /* กำหนด Margin ขณะพิมพ์ให้กระชับ */
+        margin: 10mm 12mm 10mm 12mm !important; /* เว้นระยะขอบกำลังสวยงาม */
     }
 
     html, body { 
@@ -554,12 +553,10 @@ input:focus, select:focus {
         overflow: visible !important;
     }
 
-    /* 2. ซ่อนส่วนที่ไม่ต้องการพิมพ์ */
     .no-print, .view-section, header, footer, nav, .navbar, .form-actions, #postSaveActions { 
         display: none !important; 
     }
 
-    /* 3. แสดงเฉพาะพื้นที่พรีวิว A4 */
     #previewSection { 
         display: block !important; 
         width: 100% !important;
@@ -567,7 +564,6 @@ input:focus, select:focus {
         padding: 0 !important;
     }
     
-    /* 4. ปรับแต่งโครงสร้างกระดาษ A4 ขณะสั่งพิมพ์ */
     .a4-page { 
         width: 100% !important;
         min-height: auto !important;
@@ -575,72 +571,32 @@ input:focus, select:focus {
         border: none !important; 
         box-shadow: none !important; 
         margin: 0 !important; 
-        padding: 0 !important; /* ยกเลิก padding เพื่อให้ใช้ margin ของ @page แทน */
+        padding: 0 !important;
         box-sizing: border-box !important;
-        font-size: 14pt !important; /* ย่อฟอนต์ลงเล็กน้อยขณะพิมพ์ */
-        line-height: 1.1 !important;
-    }
-
-    .a4-doc-id {
-        top: 0 !important;
-        right: 0 !important;
         font-size: 14pt !important;
+        line-height: 1.2 !important;
     }
 
-    .a4-header-center {
-        margin-top: 0 !important;
-        margin-bottom: 10px !important;
-    }
-
-    .buu-logo {
-        width: 50px !important; /* ลดขนาดโลโก้ลงเล็กน้อยตอนสั่งพิมพ์ */
-        margin-bottom: 2px !important;
-    }
-
-    .uni-title, .doc-title {
-        font-size: 15pt !important;
-    }
-
-    .metadata-layout-table {
-        margin-bottom: 8px !important;
-        font-size: 14pt !important;
-    }
-
-    .metadata-layout-table td {
-        padding: 1px 0 !important;
-    }
-
-    /* 5. ปรับตารางพัสดุให้บีบชิดพอดีกระดาษ */
     .a4-materials-table {
-        margin-top: 5px !important;
-        font-size: 13.5pt !important;
+        margin-top: 8px !important;
+        font-size: 14pt !important;
     }
 
     .a4-materials-table th, 
     .a4-materials-table td {
-        padding: 2px 3px !important; /* ลดระยะขอบเซลล์ในตาราง */
+        padding: 3px 4px !important;
     }
 
-    .static-code-row td, 
-    .total-row td {
-        height: 24px !important; /* ลดความสูงแถวเปล่าและแถวสรุป */
-    }
-
-    /* 6. ปรับตารางลายเซ็นท้ายเอกสารไม่ให้ตัดหลุดหน้า */
+    /* ปรับตารางลายเซ็นท้ายเอกสาร */
     .signatures-layout-table {
-        margin-top: 15px !important; /* ดึงตารางลายเซ็นขึ้นมาให้ชิดตารางพัสดุมากขึ้น */
-        font-size: 13.5pt !important;
-        page-break-inside: avoid !important; /* ป้องกันไม่ให้ตารางลายเซ็นโดนตัดแยกหน้า */
+        margin-top: 25px !important;
+        font-size: 14pt !important;
+        page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
 
     .sig-line-row td {
-        padding-top: 18px !important; /* ลดระยะเว้นช่องเซ็นชื่อ */
-    }
-
-    .sig-name-row td, 
-    .sig-title-row td {
-        padding-top: 1px !important;
+        padding-top: 22px !important;
     }
 }
 /* ==========================================
