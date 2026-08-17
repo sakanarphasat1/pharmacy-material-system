@@ -536,21 +536,26 @@ input:focus, select:focus {
 }
 
 /* =======================================================
-   6. PRINT MEDIA STYLES (ปรับปรุงป้องกันหน้าว่างล้น)
+   6. PRINT MEDIA STYLES (ปรับปรุงแก้ไขให้พอดี 1 หน้า A4 เสมอ)
    ======================================================= */
 @media print {
-    /* 1. รีเซ็ตพื้นหลังและขนาดของ Body ให้พอดีกับกระดาษ */
+    /* 1. รีเซ็ตพื้นหลังและกำหนดหน้ากระดาษ A4 */
+    @page { 
+        size: A4 portrait; 
+        margin: 8mm 10mm 8mm 10mm !important; /* กำหนด Margin ขณะพิมพ์ให้กระชับ */
+    }
+
     html, body { 
-        background: none !important; 
+        background: #FFFFFF !important; 
         padding: 0 !important; 
         margin: 0 !important; 
-        width: 210mm;
-        height: 297mm;
-        overflow: hidden !important; /* ป้องกันเนื้อหาล้นสร้างหน้าใหม่ */
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
     }
 
     /* 2. ซ่อนส่วนที่ไม่ต้องการพิมพ์ */
-    .no-print, .view-section, header, footer, nav { 
+    .no-print, .view-section, header, footer, nav, .navbar, .form-actions, #postSaveActions { 
         display: none !important; 
     }
 
@@ -562,23 +567,80 @@ input:focus, select:focus {
         padding: 0 !important;
     }
     
-    /* 4. ตั้งค่าหน้ากระดาษ A4 */
-    @page { 
-        size: A4 portrait; 
-        margin: 0mm !important; /* ลบขอบกระดาษของเบราว์เซอร์ออก */
-    }
-    
-    /* 5. จัดระยะเนื้อหาภายใน A4 ไม่ให้ล้น */
+    /* 4. ปรับแต่งโครงสร้างกระดาษ A4 ขณะสั่งพิมพ์ */
     .a4-page { 
-        width: 210mm !important;
-        max-height: 297mm !important; /* บังคับความสูงไม่ให้เกิน 1 หน้า A4 */
+        width: 100% !important;
+        min-height: auto !important;
+        max-height: 100% !important;
         border: none !important; 
         box-shadow: none !important; 
-        margin: 0 auto !important; 
-        padding: 15mm 15mm 10mm 15mm !important; /* ปรับลด Padding ด้านบน/ล่างลงเล็กน้อย */
-        box-sizing: border-box !important; /* นับ Padding รวมในขนาด 210x297mm */
-        page-break-after: avoid !important; /* ห้ามขึ้นหน้าใหม่หลังจบองค์ประกอบนี้ */
-        break-after: avoid !important;
+        margin: 0 !important; 
+        padding: 0 !important; /* ยกเลิก padding เพื่อให้ใช้ margin ของ @page แทน */
+        box-sizing: border-box !important;
+        font-size: 14pt !important; /* ย่อฟอนต์ลงเล็กน้อยขณะพิมพ์ */
+        line-height: 1.1 !important;
+    }
+
+    .a4-doc-id {
+        top: 0 !important;
+        right: 0 !important;
+        font-size: 14pt !important;
+    }
+
+    .a4-header-center {
+        margin-top: 0 !important;
+        margin-bottom: 10px !important;
+    }
+
+    .buu-logo {
+        width: 50px !important; /* ลดขนาดโลโก้ลงเล็กน้อยตอนสั่งพิมพ์ */
+        margin-bottom: 2px !important;
+    }
+
+    .uni-title, .doc-title {
+        font-size: 15pt !important;
+    }
+
+    .metadata-layout-table {
+        margin-bottom: 8px !important;
+        font-size: 14pt !important;
+    }
+
+    .metadata-layout-table td {
+        padding: 1px 0 !important;
+    }
+
+    /* 5. ปรับตารางพัสดุให้บีบชิดพอดีกระดาษ */
+    .a4-materials-table {
+        margin-top: 5px !important;
+        font-size: 13.5pt !important;
+    }
+
+    .a4-materials-table th, 
+    .a4-materials-table td {
+        padding: 2px 3px !important; /* ลดระยะขอบเซลล์ในตาราง */
+    }
+
+    .static-code-row td, 
+    .total-row td {
+        height: 24px !important; /* ลดความสูงแถวเปล่าและแถวสรุป */
+    }
+
+    /* 6. ปรับตารางลายเซ็นท้ายเอกสารไม่ให้ตัดหลุดหน้า */
+    .signatures-layout-table {
+        margin-top: 15px !important; /* ดึงตารางลายเซ็นขึ้นมาให้ชิดตารางพัสดุมากขึ้น */
+        font-size: 13.5pt !important;
+        page-break-inside: avoid !important; /* ป้องกันไม่ให้ตารางลายเซ็นโดนตัดแยกหน้า */
+        break-inside: avoid !important;
+    }
+
+    .sig-line-row td {
+        padding-top: 18px !important; /* ลดระยะเว้นช่องเซ็นชื่อ */
+    }
+
+    .sig-name-row td, 
+    .sig-title-row td {
+        padding-top: 1px !important;
     }
 }
 /* ==========================================
