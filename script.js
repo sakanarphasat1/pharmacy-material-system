@@ -431,10 +431,16 @@ window.reprintFromHistory = reprintFromHistory;
 // ==========================================================
 
 window.addNewRow = function() {
-    rowCount++;
     const tbody = document.getElementById('itemsTableBody');
     if (!tbody) return;
 
+    // 🟢 ตรวจสอบไม่ให้เพิ่มเกิน 11 รายการ
+    if (tbody.rows.length >= 8) {
+        alert("⚠️ จำกัดการเบิกสูงสุดไม่เกิน 8 รายการต่อ 1 ใบเบิก ");
+        return;
+    }
+
+    rowCount++;
     const tr = document.createElement('tr');
     tr.innerHTML = `
         <td class="row-index" style="text-align: center;">${rowCount}</td>
@@ -519,6 +525,11 @@ window.handleFormSubmit = async function(actionType) {
         alert("กรุณาเลือกรายการพัสดุให้ครบถ้วนก่อนดำเนินการครับ");
         return;
     }
+    // 🟢 เพิ่มการตรวจสอบไม่ให้เกิน 11 รายการก่อน บันทึก/พรีวิว
+if (items.length > 8) {
+    alert("⚠️ ระบบจำกัดการเบิกได้ไม่เกิน 8 รายการต่อ 1 ใบเบิกครับ\nกรุณาลบรายการออกให้เหลือไม่เกิน 8 รายการ");
+    return;
+}
 
     const rawDate = document.getElementById('docDate') ? document.getElementById('docDate').value : ''; 
     let formattedBEData = rawDate;
